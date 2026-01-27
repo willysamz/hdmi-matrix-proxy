@@ -1,6 +1,102 @@
 # HDMI Matrix Proxy - Automations
 # Two-way sync between input selects and matrix routing
 
+# Sync routing state to input selects (updates dropdowns when matrix changes)
+- id: matrix_sync_routing_to_selects
+  alias: "HDMI Matrix - Sync Routing to Input Selects"
+  trigger:
+    - platform: state
+      entity_id: sensor.hdmi_matrix_routing
+  action:
+    - service: input_select.select_option
+      target:
+        entity_id: input_select.matrix_output_1_source
+      data:
+        option: >
+          {% set outputs = state_attr('sensor.hdmi_matrix_routing', 'outputs') %}
+          {% if outputs %}
+            {{ (outputs | selectattr('output', 'eq', 1) | first).input | string }}
+          {% else %}
+            '1'
+          {% endif %}
+    - service: input_select.select_option
+      target:
+        entity_id: input_select.matrix_output_2_source
+      data:
+        option: >
+          {% set outputs = state_attr('sensor.hdmi_matrix_routing', 'outputs') %}
+          {% if outputs %}
+            {{ (outputs | selectattr('output', 'eq', 2) | first).input | string }}
+          {% else %}
+            '1'
+          {% endif %}
+    - service: input_select.select_option
+      target:
+        entity_id: input_select.matrix_output_3_source
+      data:
+        option: >
+          {% set outputs = state_attr('sensor.hdmi_matrix_routing', 'outputs') %}
+          {% if outputs %}
+            {{ (outputs | selectattr('output', 'eq', 3) | first).input | string }}
+          {% else %}
+            '1'
+          {% endif %}
+    - service: input_select.select_option
+      target:
+        entity_id: input_select.matrix_output_4_source
+      data:
+        option: >
+          {% set outputs = state_attr('sensor.hdmi_matrix_routing', 'outputs') %}
+          {% if outputs %}
+            {{ (outputs | selectattr('output', 'eq', 4) | first).input | string }}
+          {% else %}
+            '1'
+          {% endif %}
+    - service: input_select.select_option
+      target:
+        entity_id: input_select.matrix_output_5_source
+      data:
+        option: >
+          {% set outputs = state_attr('sensor.hdmi_matrix_routing', 'outputs') %}
+          {% if outputs %}
+            {{ (outputs | selectattr('output', 'eq', 5) | first).input | string }}
+          {% else %}
+            '1'
+          {% endif %}
+    - service: input_select.select_option
+      target:
+        entity_id: input_select.matrix_output_6_source
+      data:
+        option: >
+          {% set outputs = state_attr('sensor.hdmi_matrix_routing', 'outputs') %}
+          {% if outputs %}
+            {{ (outputs | selectattr('output', 'eq', 6) | first).input | string }}
+          {% else %}
+            '1'
+          {% endif %}
+    - service: input_select.select_option
+      target:
+        entity_id: input_select.matrix_output_7_source
+      data:
+        option: >
+          {% set outputs = state_attr('sensor.hdmi_matrix_routing', 'outputs') %}
+          {% if outputs %}
+            {{ (outputs | selectattr('output', 'eq', 7) | first).input | string }}
+          {% else %}
+            '1'
+          {% endif %}
+    - service: input_select.select_option
+      target:
+        entity_id: input_select.matrix_output_8_source
+      data:
+        option: >
+          {% set outputs = state_attr('sensor.hdmi_matrix_routing', 'outputs') %}
+          {% if outputs %}
+            {{ (outputs | selectattr('output', 'eq', 8) | first).input | string }}
+          {% else %}
+            '1'
+          {% endif %}
+
 # Output 1 automation
 - id: matrix_output_1_changed
   alias: "HDMI Matrix - Output 1 Changed"

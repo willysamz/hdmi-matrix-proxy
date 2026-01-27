@@ -20,50 +20,55 @@ cards:
         name: Uptime (seconds)
         icon: mdi:clock-outline
 
-  # Current Routing with Custom Names
-  - type: markdown
-    title: Current Routing
-    content: |
-      {% set outputs = state_attr('sensor.hdmi_matrix_routing', 'outputs') %}
-      {% set input_names = state_attr('sensor.hdmi_matrix_routing', 'input_names') %}
-      {% set output_names = state_attr('sensor.hdmi_matrix_routing', 'output_names') %}
-      {% if outputs %}
-      {% for output in outputs %}
-      **{{ output_names[output.output|string] if output_names else 'Output ' + output.output|string }}** → {{ input_names[output.input|string] if output.input and input_names else 'Unknown' }}
-      {% endfor %}
-      {% else %}
-      _No routing data available_
-      {% endif %}
-
-  # Manual Routing Control
+  # Routing Control (view current routing and change it)
   - type: entities
-    title: Manual Routing Control
+    title: Routing Control
     show_header_toggle: false
     entities:
       - entity: input_select.matrix_output_1_source
         name: Output 1
-        icon: mdi:video-input-hdmi
+        icon: mdi:television
       - entity: input_select.matrix_output_2_source
         name: Output 2
-        icon: mdi:video-input-hdmi
+        icon: mdi:television
       - entity: input_select.matrix_output_3_source
         name: Output 3
-        icon: mdi:video-input-hdmi
+        icon: mdi:television
       - entity: input_select.matrix_output_4_source
         name: Output 4
-        icon: mdi:video-input-hdmi
+        icon: mdi:television
       - entity: input_select.matrix_output_5_source
         name: Output 5
-        icon: mdi:video-input-hdmi
+        icon: mdi:television
       - entity: input_select.matrix_output_6_source
         name: Output 6
-        icon: mdi:video-input-hdmi
+        icon: mdi:television
       - entity: input_select.matrix_output_7_source
         name: Output 7
-        icon: mdi:video-input-hdmi
+        icon: mdi:television
       - entity: input_select.matrix_output_8_source
         name: Output 8
-        icon: mdi:video-input-hdmi
+        icon: mdi:television
+  
+  # Current Routing Info (for reference)
+  - type: markdown
+    content: |
+      {% set outputs = state_attr('sensor.hdmi_matrix_routing', 'outputs') %}
+      {% set input_names = state_attr('sensor.hdmi_matrix_routing', 'input_names') %}
+      {% set output_names = state_attr('sensor.hdmi_matrix_routing', 'output_names') %}
+      {% if outputs and input_names and output_names %}
+      **Input Names:**
+      {% for i in range(1, 9) %}
+      {{ i }}: {{ input_names[i|string] }}{% if not loop.last %}, {% endif %}
+      {% endfor %}
+      
+      **Output Names:**
+      {% for i in range(1, 9) %}
+      {{ i }}: {{ output_names[i|string] }}{% if not loop.last %}, {% endif %}
+      {% endfor %}
+      {% else %}
+      _Loading names from matrix..._
+      {% endif %}
 
   # Preset Scripts
   - type: entities
