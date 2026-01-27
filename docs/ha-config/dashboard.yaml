@@ -21,50 +21,19 @@ cards:
         icon: mdi:clock-outline
 
   # Current Routing with Custom Names
-  - type: entities
+  - type: markdown
     title: Current Routing
-    show_header_toggle: false
-    entities:
-      - entity: sensor.matrix_output_1_current_source
-        name: >
-          {{ state_attr('sensor.matrix_output_1_current_source', 'output_name') or 'Output 1' }}
-        secondary_info: last-changed
-        icon: mdi:television
-      - entity: sensor.matrix_output_2_current_source
-        name: >
-          {{ state_attr('sensor.matrix_output_2_current_source', 'output_name') or 'Output 2' }}
-        secondary_info: last-changed
-        icon: mdi:television
-      - entity: sensor.matrix_output_3_current_source
-        name: >
-          {{ state_attr('sensor.matrix_output_3_current_source', 'output_name') or 'Output 3' }}
-        secondary_info: last-changed
-        icon: mdi:television
-      - entity: sensor.matrix_output_4_current_source
-        name: >
-          {{ state_attr('sensor.matrix_output_4_current_source', 'output_name') or 'Output 4' }}
-        secondary_info: last-changed
-        icon: mdi:television
-      - entity: sensor.matrix_output_5_current_source
-        name: >
-          {{ state_attr('sensor.matrix_output_5_current_source', 'output_name') or 'Output 5' }}
-        secondary_info: last-changed
-        icon: mdi:television
-      - entity: sensor.matrix_output_6_current_source
-        name: >
-          {{ state_attr('sensor.matrix_output_6_current_source', 'output_name') or 'Output 6' }}
-        secondary_info: last-changed
-        icon: mdi:television
-      - entity: sensor.matrix_output_7_current_source
-        name: >
-          {{ state_attr('sensor.matrix_output_7_current_source', 'output_name') or 'Output 7' }}
-        secondary_info: last-changed
-        icon: mdi:television
-      - entity: sensor.matrix_output_8_current_source
-        name: >
-          {{ state_attr('sensor.matrix_output_8_current_source', 'output_name') or 'Output 8' }}
-        secondary_info: last-changed
-        icon: mdi:television
+    content: |
+      {% set outputs = state_attr('sensor.hdmi_matrix_routing', 'outputs') %}
+      {% set input_names = state_attr('sensor.hdmi_matrix_routing', 'input_names') %}
+      {% set output_names = state_attr('sensor.hdmi_matrix_routing', 'output_names') %}
+      {% if outputs %}
+      {% for output in outputs %}
+      **{{ output_names[output.output|string] if output_names else 'Output ' + output.output|string }}** → {{ input_names[output.input|string] if output.input and input_names else 'Unknown' }}
+      {% endfor %}
+      {% else %}
+      _No routing data available_
+      {% endif %}
 
   # Manual Routing Control
   - type: entities
@@ -72,44 +41,28 @@ cards:
     show_header_toggle: false
     entities:
       - entity: input_select.matrix_output_1_source
-        name: >
-          {% set names = state_attr('sensor.hdmi_matrix_routing', 'output_names') %}
-          {{ names['1'] if names else 'Output 1' }}
+        name: Output 1
         icon: mdi:video-input-hdmi
       - entity: input_select.matrix_output_2_source
-        name: >
-          {% set names = state_attr('sensor.hdmi_matrix_routing', 'output_names') %}
-          {{ names['2'] if names else 'Output 2' }}
+        name: Output 2
         icon: mdi:video-input-hdmi
       - entity: input_select.matrix_output_3_source
-        name: >
-          {% set names = state_attr('sensor.hdmi_matrix_routing', 'output_names') %}
-          {{ names['3'] if names else 'Output 3' }}
+        name: Output 3
         icon: mdi:video-input-hdmi
       - entity: input_select.matrix_output_4_source
-        name: >
-          {% set names = state_attr('sensor.hdmi_matrix_routing', 'output_names') %}
-          {{ names['4'] if names else 'Output 4' }}
+        name: Output 4
         icon: mdi:video-input-hdmi
       - entity: input_select.matrix_output_5_source
-        name: >
-          {% set names = state_attr('sensor.hdmi_matrix_routing', 'output_names') %}
-          {{ names['5'] if names else 'Output 5' }}
+        name: Output 5
         icon: mdi:video-input-hdmi
       - entity: input_select.matrix_output_6_source
-        name: >
-          {% set names = state_attr('sensor.hdmi_matrix_routing', 'output_names') %}
-          {{ names['6'] if names else 'Output 6' }}
+        name: Output 6
         icon: mdi:video-input-hdmi
       - entity: input_select.matrix_output_7_source
-        name: >
-          {% set names = state_attr('sensor.hdmi_matrix_routing', 'output_names') %}
-          {{ names['7'] if names else 'Output 7' }}
+        name: Output 7
         icon: mdi:video-input-hdmi
       - entity: input_select.matrix_output_8_source
-        name: >
-          {% set names = state_attr('sensor.hdmi_matrix_routing', 'output_names') %}
-          {{ names['8'] if names else 'Output 8' }}
+        name: Output 8
         icon: mdi:video-input-hdmi
 
   # Preset Scripts
