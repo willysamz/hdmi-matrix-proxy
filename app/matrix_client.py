@@ -177,17 +177,43 @@ class MatrixClient:
     async def get_routing_state(self) -> dict[int, int]:
         """Get current routing state for all outputs.
 
-        Note: The MT-VIKI matrix may not have a status query command.
-        This is a placeholder that returns an empty dict. You may need to
-        track state locally or discover the actual status command.
+        Retrieves the routing state by querying the matrix web interface.
+        The 'vsw' array contains 8 values (one per output), where each
+        value is the input number (0-7) routed to that output.
 
         Returns:
-            Dictionary mapping output number to input number
+            Dictionary mapping output number (1-8) to input number (1-8)
         """
-        # TODO: Investigate if matrix has a status query command
-        # For now, return empty dict - we'll need to track state locally
-        log.warning("get_routing_state_not_implemented")
-        return {}
+        if not self._client or not self._running:
+            log.warning("matrix_client_not_initialized", action="get_routing_state")
+            return {}
+
+        endpoint = f"{self.base_url}/form-system-info.cgi"
+        data = {"video": "0"}
+
+        try:
+            response = await self._client.post(endpoint, data=data)
+            response.raise_for_status()
+
+            result = response.json()
+            vsw = result.get("data", {}).get("video", {}).get("vsw", [])
+
+            if not vsw or len(vsw) != 8:
+                log.warning("invalid_routing_response", vsw=vsw)
+                return {}
+
+            # Convert 0-indexed array to 1-indexed dict
+            # vsw[0] = 0 means output 1 has input 1
+            routing = {}
+            for output_idx, input_idx in enumerate(vsw):
+                routing[output_idx + 1] = input_idx + 1
+
+            log.info("routing_state_retrieved", count=len(routing))
+            return routing
+
+        except Exception as e:
+            log.error("failed_to_get_routing_state", error=str(e))
+            return {}
 
     async def get_input_names(self) -> dict[int, str]:
         """Get custom names for all inputs (1-8).

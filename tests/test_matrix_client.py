@@ -244,3 +244,54 @@ async def test_get_names_fallback():
             assert output_names[1] == "Output 1"
         finally:
             await client.stop()
+
+
+@pytest.mark.asyncio
+async def test_get_routing_state():
+    """Test retrieving current routing state from matrix."""
+    client = MatrixClient(
+        base_url="http://test-matrix.local",
+        timeout=5.0,
+        verify_ssl=False,
+        health_interval=30,
+    )
+    
+    # Mock the routing state response
+    mock_response = AsyncMock()
+    mock_response.status_code = 200
+    mock_response.json = MagicMock(
+        return_value={
+            "head": {"info_var": 87, "mx_type": 8},
+            "data": {
+                "video": {
+                    "vsw": [0, 1, 2, 3, 4, 5, 6, 7],
+                    "outen": [1, 1, 1, 1, 1, 1, 1, 1]
+                }
+            }
+        }
+    )
+    mock_response.raise_for_status = MagicMock()
+    
+    mock_http_client = AsyncMock(spec=httpx.AsyncClient)
+    mock_http_client.post = AsyncMock(return_value=mock_response)
+    mock_http_client.get = AsyncMock(return_value=mock_response)
+    mock_http_client.aclose = AsyncMock()
+    
+    with patch("httpx.AsyncClient", return_value=mock_http_client):
+        await client.start()
+        
+        try:
+            routing = await client.get_routing_state()
+            
+            # Verify routing state (0-indexed from API becomes 1-indexed)
+            assert len(routing) == 8
+            assert routing[1] == 1  # Output 1 -> Input 1
+            assert routing[2] == 2  # Output 2 -> Input 2
+            assert routing[8] == 8  # Output 8 -> Input 8
+            
+            # Verify correct endpoint and data
+            calls = [call for call in mock_http_client.post.call_args_list 
+                    if "form-system-info.cgi" in str(call)]
+            assert len(calls) > 0
+        finally:
+            await client.stop()
