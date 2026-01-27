@@ -339,8 +339,7 @@ template:
           {% endif %}
         attributes:
           output_name: >
-            {% set output_names = state_attr('sensor.hdmi_matrix_routing
-            z', 'output_names') %}
+            {% set output_names = state_attr('sensor.hdmi_matrix_routing', 'output_names') %}
             {% if output_names %}
               {{ output_names['5'] }}
             {% else %}
