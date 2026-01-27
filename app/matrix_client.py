@@ -170,7 +170,7 @@ class MatrixClient:
         if not 1 <= output_num <= 8:
             raise ValueError(f"Invalid output number: {output_num} (must be 1-8)")
 
-        cmd = f"SW+{input_num}+{output_num}"
+        cmd = f"SW {input_num} {output_num}"
         await self.send_command(cmd)
         return True
 

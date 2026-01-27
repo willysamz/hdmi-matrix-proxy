@@ -125,7 +125,7 @@ async def test_set_routing_calls_send_command():
             # Verify the command was formatted correctly
             mock_http_client.post.assert_called_with(
                 "http://test-matrix.local/form-system-cmd.cgi",
-                data={"cmd": "SW+3+5"}
+                data={"cmd": "SW 3 5"}
             )
         finally:
             await client.stop()
