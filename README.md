@@ -35,7 +35,7 @@ helm install matrix ./chart \
 
 | Environment Variable | Description | Default |
 |---------------------|-------------|---------|
-| `MATRIX_URL` | Matrix web interface URL | `http://matrix.home.willysamz.com` |
+| `MATRIX_URL` | Matrix web interface URL or IP | `http://192.168.1.200` |
 | `MATRIX_TIMEOUT` | Request timeout (seconds) | `5.0` |
 | `MATRIX_VERIFY_SSL` | Verify SSL certificates | `false` |
 | `MATRIX_HEALTH_INTERVAL` | Health check interval (seconds) | `30` |

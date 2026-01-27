@@ -13,7 +13,7 @@ class Settings(BaseSettings):
     )
 
     # Matrix HTTP settings
-    matrix_url: str = "http://matrix.home.willysamz.com"
+    matrix_url: str = "http://192.168.1.200"
     matrix_timeout: float = 5.0
     matrix_verify_ssl: bool = False
 

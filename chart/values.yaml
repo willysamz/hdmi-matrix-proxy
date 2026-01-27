@@ -15,8 +15,8 @@ fullnameOverride: ""
 
 # Matrix configuration
 config:
-  # REQUIRED: Set this to your matrix's web interface URL
-  matrixUrl: "http://matrix.home.willysamz.com"
+  # REQUIRED: Set this to your matrix's web interface URL or IP
+  matrixUrl: "http://192.168.1.200"
   matrixTimeout: "5.0"
   matrixVerifySsl: "false"
   matrixHealthInterval: "30"
@@ -36,6 +36,23 @@ nodeSelector: {}
 tolerations: []
 
 affinity: {}
+
+# DNS configuration
+dnsPolicy: ""  # Optional: ClusterFirst, Default, ClusterFirstWithHostNet, None
+dnsConfig: {}
+  # nameservers:
+  #   - 192.168.1.1
+  # searches:
+  #   - home.willysamz.com
+  # options:
+  #   - name: ndots
+  #     value: "2"
+
+# Host aliases (map hostnames to IPs)
+hostAliases: []
+  # - ip: "192.168.1.200"
+  #   hostnames:
+  #     - "matrix.home.willysamz.com"
 
 # Pod security context
 podSecurityContext: {}
