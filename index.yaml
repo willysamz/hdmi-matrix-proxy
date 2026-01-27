@@ -2,8 +2,25 @@ apiVersion: v1
 entries:
   hdmi-matrix-proxy:
   - apiVersion: v2
+    appVersion: 0.1.1
+    created: "2026-01-27T02:47:51.754942899Z"
+    description: REST API proxy for MT-VIKI MT-H8M88 HDMI matrix HTTP control
+    digest: c5ac6773349abffe232ff06ff07adb586c4487407742703778eceaa6004141d1
+    keywords:
+    - hdmi
+    - matrix
+    - video
+    - home-assistant
+    maintainers:
+    - name: wsamuels
+    name: hdmi-matrix-proxy
+    type: application
+    urls:
+    - https://willysamz.github.io/hdmi-matrix-proxy/hdmi-matrix-proxy-0.1.1.tgz
+    version: 0.1.1
+  - apiVersion: v2
     appVersion: 0.1.0
-    created: "2026-01-27T02:14:38.095457899Z"
+    created: "2026-01-27T02:47:51.754550125Z"
     description: REST API proxy for MT-VIKI MT-H8M88 HDMI matrix HTTP control
     digest: edcb53caee60f03dace606fde8f2e4549504a38fa8c9c794a61ceb80516a7912
     keywords:
@@ -18,4 +35,4 @@ entries:
     urls:
     - https://willysamz.github.io/hdmi-matrix-proxy/hdmi-matrix-proxy-0.1.0.tgz
     version: 0.1.0
-generated: "2026-01-27T02:14:38.094901321Z"
+generated: "2026-01-27T02:47:51.754076309Z"
