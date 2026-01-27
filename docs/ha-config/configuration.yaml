@@ -1,6 +1,26 @@
 # HDMI Matrix Proxy - Home Assistant Configuration
 # Copy these sections into your main configuration.yaml
 
+# Customize input_select friendly names to show which output they control
+homeassistant:
+  customize:
+    input_select.matrix_output_1_source:
+      friendly_name: "Output 1"
+    input_select.matrix_output_2_source:
+      friendly_name: "Output 2"
+    input_select.matrix_output_3_source:
+      friendly_name: "Output 3"
+    input_select.matrix_output_4_source:
+      friendly_name: "Output 4"
+    input_select.matrix_output_5_source:
+      friendly_name: "Output 5"
+    input_select.matrix_output_6_source:
+      friendly_name: "Output 6"
+    input_select.matrix_output_7_source:
+      friendly_name: "Output 7"
+    input_select.matrix_output_8_source:
+      friendly_name: "Output 8"
+
 # REST API Integration
 rest:
   # Main routing sensor - includes custom names from matrix

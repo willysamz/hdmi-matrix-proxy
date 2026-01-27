@@ -21,54 +21,45 @@ cards:
         icon: mdi:clock-outline
 
   # Routing Control (view current routing and change it)
-  - type: entities
-    title: Routing Control
-    show_header_toggle: false
-    entities:
-      - entity: input_select.matrix_output_1_source
-        name: Output 1
-        icon: mdi:television
-      - entity: input_select.matrix_output_2_source
-        name: Output 2
-        icon: mdi:television
-      - entity: input_select.matrix_output_3_source
-        name: Output 3
-        icon: mdi:television
-      - entity: input_select.matrix_output_4_source
-        name: Output 4
-        icon: mdi:television
-      - entity: input_select.matrix_output_5_source
-        name: Output 5
-        icon: mdi:television
-      - entity: input_select.matrix_output_6_source
-        name: Output 6
-        icon: mdi:television
-      - entity: input_select.matrix_output_7_source
-        name: Output 7
-        icon: mdi:television
-      - entity: input_select.matrix_output_8_source
-        name: Output 8
-        icon: mdi:television
-  
-  # Current Routing Info (for reference)
   - type: markdown
+    title: Routing Control
     content: |
       {% set outputs = state_attr('sensor.hdmi_matrix_routing', 'outputs') %}
       {% set input_names = state_attr('sensor.hdmi_matrix_routing', 'input_names') %}
       {% set output_names = state_attr('sensor.hdmi_matrix_routing', 'output_names') %}
       {% if outputs and input_names and output_names %}
-      **Input Names:**
-      {% for i in range(1, 9) %}
-      {{ i }}: {{ input_names[i|string] }}{% if not loop.last %}, {% endif %}
+      | Output | Current Input |
+      |--------|---------------|
+      {% for output in outputs -%}
+      | **{{ output_names[output.output|string] }}** | {{ input_names[output.input|string] if output.input else 'None' }} |
       {% endfor %}
       
-      **Output Names:**
-      {% for i in range(1, 9) %}
-      {{ i }}: {{ output_names[i|string] }}{% if not loop.last %}, {% endif %}
-      {% endfor %}
+      **Input Reference:** {% for i in range(1, 9) %}{{ i }}: {{ input_names[i|string] }}{% if not loop.last %} • {% endif %}{% endfor %}
+      
+      **To change routing, select input number in dropdowns below:**
       {% else %}
-      _Loading names from matrix..._
+      _Loading routing data from matrix..._
       {% endif %}
+  
+  - type: entities
+    show_header_toggle: false
+    entities:
+      - entity: input_select.matrix_output_1_source
+        icon: mdi:television
+      - entity: input_select.matrix_output_2_source
+        icon: mdi:television
+      - entity: input_select.matrix_output_3_source
+        icon: mdi:television
+      - entity: input_select.matrix_output_4_source
+        icon: mdi:television
+      - entity: input_select.matrix_output_5_source
+        icon: mdi:television
+      - entity: input_select.matrix_output_6_source
+        icon: mdi:television
+      - entity: input_select.matrix_output_7_source
+        icon: mdi:television
+      - entity: input_select.matrix_output_8_source
+        icon: mdi:television
 
   # Preset Scripts
   - type: entities
