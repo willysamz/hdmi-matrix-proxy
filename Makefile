@@ -77,6 +77,20 @@ bump-minor: ## Bump minor version (0.X.0)
 bump-major: ## Bump major version (X.0.0)
 	$(VENV)/bin/python scripts/bump_version.py major
 
+.PHONY: release
+release: ## Create a release (bump patch, commit, tag, push)
+	@if [ -n "$$(git status --porcelain)" ]; then \
+		echo "Error: Working directory not clean. Commit changes first."; \
+		exit 1; \
+	fi
+	$(VENV)/bin/python scripts/bump_version.py patch
+	@VERSION=$$(cat VERSION) && \
+	git add -A && \
+	git commit -m "chore: release v$$VERSION" && \
+	git tag "v$$VERSION" && \
+	echo "Created release v$$VERSION" && \
+	echo "Run 'git push origin main --tags' to publish"
+
 # Helm chart targets
 .PHONY: helm-lint
 helm-lint: ## Lint Helm chart
