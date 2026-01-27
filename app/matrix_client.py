@@ -32,7 +32,7 @@ class MatrixClient:
         # Ensure base_url has a protocol
         if not base_url.startswith(("http://", "https://")):
             base_url = f"http://{base_url}"
-        
+
         self.base_url = base_url.rstrip("/")
         self.timeout = timeout
         self.verify_ssl = verify_ssl
