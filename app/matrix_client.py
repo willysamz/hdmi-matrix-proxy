@@ -24,11 +24,15 @@ class MatrixClient:
         """Initialize the matrix client.
 
         Args:
-            base_url: Base URL of the matrix web interface
+            base_url: Base URL of the matrix web interface (with or without http://)
             timeout: Request timeout in seconds
             verify_ssl: Whether to verify SSL certificates
             health_interval: Interval between health checks in seconds
         """
+        # Ensure base_url has a protocol
+        if not base_url.startswith(("http://", "https://")):
+            base_url = f"http://{base_url}"
+        
         self.base_url = base_url.rstrip("/")
         self.timeout = timeout
         self.verify_ssl = verify_ssl
