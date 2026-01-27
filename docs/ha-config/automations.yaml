@@ -36,6 +36,7 @@
 # Output 1 automation
 - id: matrix_output_1_changed
   alias: "HDMI Matrix - Output 1 Changed"
+  mode: restart
   trigger:
     - platform: state
       entity_id: input_select.matrix_output_1_source
@@ -43,7 +44,11 @@
     - condition: template
       value_template: "{{ trigger.to_state.state not in ['unknown', 'unavailable'] }}"
     - condition: template
+      value_template: "{{ trigger.from_state.state not in ['unknown', 'unavailable'] }}"
+    - condition: template
       value_template: "{{ trigger.from_state.state != trigger.to_state.state }}"
+    - condition: template
+      value_template: "{{ trigger.to_state.context.parent_id == none }}"
   action:
     - service: rest_command.matrix_route_output_1
       data:
@@ -52,6 +57,7 @@
 # Output 2 automation
 - id: matrix_output_2_changed
   alias: "HDMI Matrix - Output 2 Changed"
+  mode: restart
   trigger:
     - platform: state
       entity_id: input_select.matrix_output_2_source
@@ -59,7 +65,11 @@
     - condition: template
       value_template: "{{ trigger.to_state.state not in ['unknown', 'unavailable'] }}"
     - condition: template
+      value_template: "{{ trigger.from_state.state not in ['unknown', 'unavailable'] }}"
+    - condition: template
       value_template: "{{ trigger.from_state.state != trigger.to_state.state }}"
+    - condition: template
+      value_template: "{{ trigger.to_state.context.parent_id == none }}"
   action:
     - service: rest_command.matrix_route_output_2
       data:
@@ -68,6 +78,7 @@
 # Output 3 automation
 - id: matrix_output_3_changed
   alias: "HDMI Matrix - Output 3 Changed"
+  mode: restart
   trigger:
     - platform: state
       entity_id: input_select.matrix_output_3_source
@@ -75,7 +86,11 @@
     - condition: template
       value_template: "{{ trigger.to_state.state not in ['unknown', 'unavailable'] }}"
     - condition: template
+      value_template: "{{ trigger.from_state.state not in ['unknown', 'unavailable'] }}"
+    - condition: template
       value_template: "{{ trigger.from_state.state != trigger.to_state.state }}"
+    - condition: template
+      value_template: "{{ trigger.to_state.context.parent_id == none }}"
   action:
     - service: rest_command.matrix_route_output_3
       data:
@@ -84,6 +99,7 @@
 # Output 4 automation
 - id: matrix_output_4_changed
   alias: "HDMI Matrix - Output 4 Changed"
+  mode: restart
   trigger:
     - platform: state
       entity_id: input_select.matrix_output_4_source
@@ -91,7 +107,11 @@
     - condition: template
       value_template: "{{ trigger.to_state.state not in ['unknown', 'unavailable'] }}"
     - condition: template
+      value_template: "{{ trigger.from_state.state not in ['unknown', 'unavailable'] }}"
+    - condition: template
       value_template: "{{ trigger.from_state.state != trigger.to_state.state }}"
+    - condition: template
+      value_template: "{{ trigger.to_state.context.parent_id == none }}"
   action:
     - service: rest_command.matrix_route_output_4
       data:
@@ -100,6 +120,7 @@
 # Output 5 automation
 - id: matrix_output_5_changed
   alias: "HDMI Matrix - Output 5 Changed"
+  mode: restart
   trigger:
     - platform: state
       entity_id: input_select.matrix_output_5_source
@@ -107,7 +128,11 @@
     - condition: template
       value_template: "{{ trigger.to_state.state not in ['unknown', 'unavailable'] }}"
     - condition: template
+      value_template: "{{ trigger.from_state.state not in ['unknown', 'unavailable'] }}"
+    - condition: template
       value_template: "{{ trigger.from_state.state != trigger.to_state.state }}"
+    - condition: template
+      value_template: "{{ trigger.to_state.context.parent_id == none }}"
   action:
     - service: rest_command.matrix_route_output_5
       data:
@@ -116,6 +141,7 @@
 # Output 6 automation
 - id: matrix_output_6_changed
   alias: "HDMI Matrix - Output 6 Changed"
+  mode: restart
   trigger:
     - platform: state
       entity_id: input_select.matrix_output_6_source
@@ -123,7 +149,11 @@
     - condition: template
       value_template: "{{ trigger.to_state.state not in ['unknown', 'unavailable'] }}"
     - condition: template
+      value_template: "{{ trigger.from_state.state not in ['unknown', 'unavailable'] }}"
+    - condition: template
       value_template: "{{ trigger.from_state.state != trigger.to_state.state }}"
+    - condition: template
+      value_template: "{{ trigger.to_state.context.parent_id == none }}"
   action:
     - service: rest_command.matrix_route_output_6
       data:
@@ -132,6 +162,7 @@
 # Output 7 automation
 - id: matrix_output_7_changed
   alias: "HDMI Matrix - Output 7 Changed"
+  mode: restart
   trigger:
     - platform: state
       entity_id: input_select.matrix_output_7_source
@@ -139,7 +170,11 @@
     - condition: template
       value_template: "{{ trigger.to_state.state not in ['unknown', 'unavailable'] }}"
     - condition: template
+      value_template: "{{ trigger.from_state.state not in ['unknown', 'unavailable'] }}"
+    - condition: template
       value_template: "{{ trigger.from_state.state != trigger.to_state.state }}"
+    - condition: template
+      value_template: "{{ trigger.to_state.context.parent_id == none }}"
   action:
     - service: rest_command.matrix_route_output_7
       data:
@@ -148,6 +183,7 @@
 # Output 8 automation
 - id: matrix_output_8_changed
   alias: "HDMI Matrix - Output 8 Changed"
+  mode: restart
   trigger:
     - platform: state
       entity_id: input_select.matrix_output_8_source
@@ -155,7 +191,11 @@
     - condition: template
       value_template: "{{ trigger.to_state.state not in ['unknown', 'unavailable'] }}"
     - condition: template
+      value_template: "{{ trigger.from_state.state not in ['unknown', 'unavailable'] }}"
+    - condition: template
       value_template: "{{ trigger.from_state.state != trigger.to_state.state }}"
+    - condition: template
+      value_template: "{{ trigger.to_state.context.parent_id == none }}"
   action:
     - service: rest_command.matrix_route_output_8
       data:
