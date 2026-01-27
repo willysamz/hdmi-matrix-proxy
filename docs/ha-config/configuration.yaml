@@ -1,0 +1,429 @@
+# HDMI Matrix Proxy - Home Assistant Configuration
+# Copy these sections into your main configuration.yaml
+
+# REST API Integration
+rest:
+  # Main routing sensor - includes custom names from matrix
+  - resource: "http://hdmi-matrix-proxy:8080/api/routing"
+    scan_interval: 10
+    sensor:
+      - name: "HDMI Matrix Routing"
+        value_template: "{{ value_json.outputs | length }}"
+        json_attributes:
+          - outputs
+          - input_names
+          - output_names
+        icon: mdi:video-switch
+
+  # Status sensor
+  - resource: "http://hdmi-matrix-proxy:8080/api/status"
+    scan_interval: 30
+    sensor:
+      - name: "HDMI Matrix Status"
+        value_template: "{{ value_json.connection }}"
+        json_attributes:
+          - url
+          - last_command
+        icon: mdi:lan-connect
+
+  # Health sensor
+  - resource: "http://hdmi-matrix-proxy:8080/healthz/ready"
+    scan_interval: 30
+    sensor:
+      - name: "HDMI Matrix Health"
+        value_template: "{{ value_json.status }}"
+        json_attributes:
+          - matrix_connected
+          - uptime_seconds
+        icon: mdi:heart-pulse
+
+# REST Commands for routing
+rest_command:
+  matrix_route_output_1:
+    url: "http://hdmi-matrix-proxy:8080/api/routing/output/1"
+    method: POST
+    content_type: "application/json"
+    payload: '{"input": {{ input }}}'
+
+  matrix_route_output_2:
+    url: "http://hdmi-matrix-proxy:8080/api/routing/output/2"
+    method: POST
+    content_type: "application/json"
+    payload: '{"input": {{ input }}}'
+
+  matrix_route_output_3:
+    url: "http://hdmi-matrix-proxy:8080/api/routing/output/3"
+    method: POST
+    content_type: "application/json"
+    payload: '{"input": {{ input }}}'
+
+  matrix_route_output_4:
+    url: "http://hdmi-matrix-proxy:8080/api/routing/output/4"
+    method: POST
+    content_type: "application/json"
+    payload: '{"input": {{ input }}}'
+
+  matrix_route_output_5:
+    url: "http://hdmi-matrix-proxy:8080/api/routing/output/5"
+    method: POST
+    content_type: "application/json"
+    payload: '{"input": {{ input }}}'
+
+  matrix_route_output_6:
+    url: "http://hdmi-matrix-proxy:8080/api/routing/output/6"
+    method: POST
+    content_type: "application/json"
+    payload: '{"input": {{ input }}}'
+
+  matrix_route_output_7:
+    url: "http://hdmi-matrix-proxy:8080/api/routing/output/7"
+    method: POST
+    content_type: "application/json"
+    payload: '{"input": {{ input }}}'
+
+  matrix_route_output_8:
+    url: "http://hdmi-matrix-proxy:8080/api/routing/output/8"
+    method: POST
+    content_type: "application/json"
+    payload: '{"input": {{ input }}}'
+
+  # Preset routing command
+  matrix_preset:
+    url: "http://hdmi-matrix-proxy:8080/api/routing/preset"
+    method: POST
+    content_type: "application/json"
+    payload: '{{ mappings }}'
+
+# Input Select Helpers (for UI control)
+input_select:
+  matrix_output_1_source:
+    name: "Output 1 Source"
+    options:
+      - "1"
+      - "2"
+      - "3"
+      - "4"
+      - "5"
+      - "6"
+      - "7"
+      - "8"
+    initial: "1"
+    icon: mdi:video-input-hdmi
+
+  matrix_output_2_source:
+    name: "Output 2 Source"
+    options:
+      - "1"
+      - "2"
+      - "3"
+      - "4"
+      - "5"
+      - "6"
+      - "7"
+      - "8"
+    initial: "1"
+    icon: mdi:video-input-hdmi
+
+  matrix_output_3_source:
+    name: "Output 3 Source"
+    options:
+      - "1"
+      - "2"
+      - "3"
+      - "4"
+      - "5"
+      - "6"
+      - "7"
+      - "8"
+    initial: "1"
+    icon: mdi:video-input-hdmi
+
+  matrix_output_4_source:
+    name: "Output 4 Source"
+    options:
+      - "1"
+      - "2"
+      - "3"
+      - "4"
+      - "5"
+      - "6"
+      - "7"
+      - "8"
+    initial: "1"
+    icon: mdi:video-input-hdmi
+
+  matrix_output_5_source:
+    name: "Output 5 Source"
+    options:
+      - "1"
+      - "2"
+      - "3"
+      - "4"
+      - "5"
+      - "6"
+      - "7"
+      - "8"
+    initial: "1"
+    icon: mdi:video-input-hdmi
+
+  matrix_output_6_source:
+    name: "Output 6 Source"
+    options:
+      - "1"
+      - "2"
+      - "3"
+      - "4"
+      - "5"
+      - "6"
+      - "7"
+      - "8"
+    initial: "1"
+    icon: mdi:video-input-hdmi
+
+  matrix_output_7_source:
+    name: "Output 7 Source"
+    options:
+      - "1"
+      - "2"
+      - "3"
+      - "4"
+      - "5"
+      - "6"
+      - "7"
+      - "8"
+    initial: "1"
+    icon: mdi:video-input-hdmi
+
+  matrix_output_8_source:
+    name: "Output 8 Source"
+    options:
+      - "1"
+      - "2"
+      - "3"
+      - "4"
+      - "5"
+      - "6"
+      - "7"
+      - "8"
+    initial: "1"
+    icon: mdi:video-input-hdmi
+
+# Template Sensors (for displaying custom names)
+template:
+  - sensor:
+      # Current sources for each output with custom names
+      - name: "Matrix Output 1 Current Source"
+        unique_id: matrix_output_1_current_source
+        state: >
+          {% set outputs = state_attr('sensor.hdmi_matrix_routing', 'outputs') %}
+          {% set input_names = state_attr('sensor.hdmi_matrix_routing', 'input_names') %}
+          {% if outputs %}
+            {% set output = outputs | selectattr('output', 'eq', 1) | first %}
+            {% if output.input and input_names %}
+              {{ input_names[output.input | string] }}
+            {% elif output.input %}
+              HDMI {{ output.input }}
+            {% else %}
+              Unknown
+            {% endif %}
+          {% else %}
+            Unknown
+          {% endif %}
+        attributes:
+          output_name: >
+            {% set output_names = state_attr('sensor.hdmi_matrix_routing', 'output_names') %}
+            {% if output_names %}
+              {{ output_names['1'] }}
+            {% else %}
+              Output 1
+            {% endif %}
+        icon: mdi:television
+
+      - name: "Matrix Output 2 Current Source"
+        unique_id: matrix_output_2_current_source
+        state: >
+          {% set outputs = state_attr('sensor.hdmi_matrix_routing', 'outputs') %}
+          {% set input_names = state_attr('sensor.hdmi_matrix_routing', 'input_names') %}
+          {% if outputs %}
+            {% set output = outputs | selectattr('output', 'eq', 2) | first %}
+            {% if output.input and input_names %}
+              {{ input_names[output.input | string] }}
+            {% elif output.input %}
+              HDMI {{ output.input }}
+            {% else %}
+              Unknown
+            {% endif %}
+          {% else %}
+            Unknown
+          {% endif %}
+        attributes:
+          output_name: >
+            {% set output_names = state_attr('sensor.hdmi_matrix_routing', 'output_names') %}
+            {% if output_names %}
+              {{ output_names['2'] }}
+            {% else %}
+              Output 2
+            {% endif %}
+        icon: mdi:television
+
+      - name: "Matrix Output 3 Current Source"
+        unique_id: matrix_output_3_current_source
+        state: >
+          {% set outputs = state_attr('sensor.hdmi_matrix_routing', 'outputs') %}
+          {% set input_names = state_attr('sensor.hdmi_matrix_routing', 'input_names') %}
+          {% if outputs %}
+            {% set output = outputs | selectattr('output', 'eq', 3) | first %}
+            {% if output.input and input_names %}
+              {{ input_names[output.input | string] }}
+            {% elif output.input %}
+              HDMI {{ output.input }}
+            {% else %}
+              Unknown
+            {% endif %}
+          {% else %}
+            Unknown
+          {% endif %}
+        attributes:
+          output_name: >
+            {% set output_names = state_attr('sensor.hdmi_matrix_routing', 'output_names') %}
+            {% if output_names %}
+              {{ output_names['3'] }}
+            {% else %}
+              Output 3
+            {% endif %}
+        icon: mdi:television
+
+      - name: "Matrix Output 4 Current Source"
+        unique_id: matrix_output_4_current_source
+        state: >
+          {% set outputs = state_attr('sensor.hdmi_matrix_routing', 'outputs') %}
+          {% set input_names = state_attr('sensor.hdmi_matrix_routing', 'input_names') %}
+          {% if outputs %}
+            {% set output = outputs | selectattr('output', 'eq', 4) | first %}
+            {% if output.input and input_names %}
+              {{ input_names[output.input | string] }}
+            {% elif output.input %}
+              HDMI {{ output.input }}
+            {% else %}
+              Unknown
+            {% endif %}
+          {% else %}
+            Unknown
+          {% endif %}
+        attributes:
+          output_name: >
+            {% set output_names = state_attr('sensor.hdmi_matrix_routing', 'output_names') %}
+            {% if output_names %}
+              {{ output_names['4'] }}
+            {% else %}
+              Output 4
+            {% endif %}
+        icon: mdi:television
+
+      - name: "Matrix Output 5 Current Source"
+        unique_id: matrix_output_5_current_source
+        state: >
+          {% set outputs = state_attr('sensor.hdmi_matrix_routing', 'outputs') %}
+          {% set input_names = state_attr('sensor.hdmi_matrix_routing', 'input_names') %}
+          {% if outputs %}
+            {% set output = outputs | selectattr('output', 'eq', 5) | first %}
+            {% if output.input and input_names %}
+              {{ input_names[output.input | string] }}
+            {% elif output.input %}
+              HDMI {{ output.input }}
+            {% else %}
+              Unknown
+            {% endif %}
+          {% else %}
+            Unknown
+          {% endif %}
+        attributes:
+          output_name: >
+            {% set output_names = state_attr('sensor.hdmi_matrix_routing', 'output_names') %}
+            {% if output_names %}
+              {{ output_names['5'] }}
+            {% else %}
+              Output 5
+            {% endif %}
+        icon: mdi:television
+
+      - name: "Matrix Output 6 Current Source"
+        unique_id: matrix_output_6_current_source
+        state: >
+          {% set outputs = state_attr('sensor.hdmi_matrix_routing', 'outputs') %}
+          {% set input_names = state_attr('sensor.hdmi_matrix_routing', 'input_names') %}
+          {% if outputs %}
+            {% set output = outputs | selectattr('output', 'eq', 6) | first %}
+            {% if output.input and input_names %}
+              {{ input_names[output.input | string] }}
+            {% elif output.input %}
+              HDMI {{ output.input }}
+            {% else %}
+              Unknown
+            {% endif %}
+          {% else %}
+            Unknown
+          {% endif %}
+        attributes:
+          output_name: >
+            {% set output_names = state_attr('sensor.hdmi_matrix_routing', 'output_names') %}
+            {% if output_names %}
+              {{ output_names['6'] }}
+            {% else %}
+              Output 6
+            {% endif %}
+        icon: mdi:television
+
+      - name: "Matrix Output 7 Current Source"
+        unique_id: matrix_output_7_current_source
+        state: >
+          {% set outputs = state_attr('sensor.hdmi_matrix_routing', 'outputs') %}
+          {% set input_names = state_attr('sensor.hdmi_matrix_routing', 'input_names') %}
+          {% if outputs %}
+            {% set output = outputs | selectattr('output', 'eq', 7) | first %}
+            {% if output.input and input_names %}
+              {{ input_names[output.input | string] }}
+            {% elif output.input %}
+              HDMI {{ output.input }}
+            {% else %}
+              Unknown
+            {% endif %}
+          {% else %}
+            Unknown
+          {% endif %}
+        attributes:
+          output_name: >
+            {% set output_names = state_attr('sensor.hdmi_matrix_routing', 'output_names') %}
+            {% if output_names %}
+              {{ output_names['7'] }}
+            {% else %}
+              Output 7
+            {% endif %}
+        icon: mdi:television
+
+      - name: "Matrix Output 8 Current Source"
+        unique_id: matrix_output_8_current_source
+        state: >
+          {% set outputs = state_attr('sensor.hdmi_matrix_routing', 'outputs') %}
+          {% set input_names = state_attr('sensor.hdmi_matrix_routing', 'input_names') %}
+          {% if outputs %}
+            {% set output = outputs | selectattr('output', 'eq', 8) | first %}
+            {% if output.input and input_names %}
+              {{ input_names[output.input | string] }}
+            {% elif output.input %}
+              HDMI {{ output.input }}
+            {% else %}
+              Unknown
+            {% endif %}
+          {% else %}
+            Unknown
+          {% endif %}
+        attributes:
+          output_name: >
+            {% set output_names = state_attr('sensor.hdmi_matrix_routing', 'output_names') %}
+            {% if output_names %}
+              {{ output_names['8'] }}
+            {% else %}
+              Output 8
+            {% endif %}
+        icon: mdi:television

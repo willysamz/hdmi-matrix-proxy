@@ -1,0 +1,605 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "HDMI Matrix Proxy",
+    "description": "REST API for controlling MT-VIKI MT-H8M88 8x8 HDMI matrix",
+    "version": "0.1.0"
+  },
+  "paths": {
+    "/healthz/live": {
+      "get": {
+        "tags": [
+          "Health",
+          "Health"
+        ],
+        "summary": "Liveness probe",
+        "description": "Liveness probe for Kubernetes.\n\nReturns 200 if the application is running.",
+        "operationId": "liveness_healthz_live_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/healthz/ready": {
+      "get": {
+        "tags": [
+          "Health",
+          "Health"
+        ],
+        "summary": "Readiness probe",
+        "description": "Readiness probe for Kubernetes.\n\nReturns:\n    Health status including matrix connection state",
+        "operationId": "readiness_healthz_ready_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/status": {
+      "get": {
+        "tags": [
+          "System"
+        ],
+        "summary": "Get matrix status",
+        "description": "Get current matrix connection status.\n\nReturns:\n    Matrix connection status and last command info",
+        "operationId": "get_status_api_status_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MatrixStatus"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/routing": {
+      "get": {
+        "tags": [
+          "Routing"
+        ],
+        "summary": "Get all routing state",
+        "description": "Get current input->output routing for all outputs.\n\nIncludes custom input and output names from the matrix.\n\nNote: The matrix may not support querying routing state.\nThis returns an empty state. Consider tracking state locally.\n\nReturns:\n    Current routing state for all 8 outputs with custom names",
+        "operationId": "get_routing_api_routing_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RoutingState"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/routing/output/{output_id}": {
+      "get": {
+        "tags": [
+          "Routing"
+        ],
+        "summary": "Get routing for specific output",
+        "description": "Get current input routed to a specific output.\n\nIncludes custom input and output names from the matrix.\n\nArgs:\n    output_id: Output number (1-8)\n\nReturns:\n    Current input routed to this output with custom names",
+        "operationId": "get_output_routing_api_routing_output__output_id__get",
+        "parameters": [
+          {
+            "name": "output_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "maximum": 8,
+              "minimum": 1,
+              "description": "Output number (1-8)",
+              "title": "Output Id"
+            },
+            "description": "Output number (1-8)"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OutputRouting"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Routing"
+        ],
+        "summary": "Set routing for specific output",
+        "description": "Route an input to a specific output.\n\nArgs:\n    output_id: Output number (1-8)\n    request: Input number to route (1-8)\n\nReturns:\n    Success status and routing confirmation",
+        "operationId": "set_output_routing_api_routing_output__output_id__post",
+        "parameters": [
+          {
+            "name": "output_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "maximum": 8,
+              "minimum": 1,
+              "description": "Output number (1-8)",
+              "title": "Output Id"
+            },
+            "description": "Output number (1-8)"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetRoutingRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SetRoutingResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/routing/preset": {
+      "post": {
+        "tags": [
+          "Routing"
+        ],
+        "summary": "Set multiple routings at once",
+        "description": "Set multiple output routings at once.\n\nArgs:\n    request: Dictionary of output->input mappings\n\nReturns:\n    Success status with applied and failed mappings",
+        "operationId": "set_preset_routing_api_routing_preset_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PresetRoutingRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PresetRoutingResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/": {
+      "get": {
+        "summary": "Root",
+        "description": "Root endpoint with API info.",
+        "operationId": "root__get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "title": "Response Root  Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "ConnectionState": {
+        "type": "string",
+        "enum": [
+          "connected",
+          "disconnected",
+          "error"
+        ],
+        "title": "ConnectionState",
+        "description": "Matrix connection state."
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "HealthResponse": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "ok",
+              "degraded",
+              "error"
+            ],
+            "title": "Status"
+          },
+          "matrix_connected": {
+            "type": "boolean",
+            "title": "Matrix Connected"
+          },
+          "last_health_check": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Health Check"
+          },
+          "uptime_seconds": {
+            "type": "number",
+            "title": "Uptime Seconds"
+          }
+        },
+        "type": "object",
+        "required": [
+          "status",
+          "matrix_connected",
+          "last_health_check",
+          "uptime_seconds"
+        ],
+        "title": "HealthResponse",
+        "description": "Health check response."
+      },
+      "MatrixStatus": {
+        "properties": {
+          "connection": {
+            "$ref": "#/components/schemas/ConnectionState"
+          },
+          "url": {
+            "type": "string",
+            "title": "Url"
+          },
+          "last_command": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Command"
+          },
+          "last_response": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Response"
+          }
+        },
+        "type": "object",
+        "required": [
+          "connection",
+          "url"
+        ],
+        "title": "MatrixStatus",
+        "description": "Matrix status response."
+      },
+      "OutputRouting": {
+        "properties": {
+          "output": {
+            "type": "integer",
+            "maximum": 8.0,
+            "minimum": 1.0,
+            "title": "Output",
+            "description": "Output number (1-8)"
+          },
+          "output_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Output Name"
+          },
+          "input": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 8.0,
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Input",
+            "description": "Input number (1-8)"
+          },
+          "input_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Input Name"
+          }
+        },
+        "type": "object",
+        "required": [
+          "output"
+        ],
+        "title": "OutputRouting",
+        "description": "Single output routing."
+      },
+      "PresetRoutingRequest": {
+        "properties": {
+          "mappings": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "type": "object",
+            "title": "Mappings",
+            "description": "Dictionary of output->input mappings (e.g., {1: 1, 2: 2, 3: 3})"
+          }
+        },
+        "type": "object",
+        "required": [
+          "mappings"
+        ],
+        "title": "PresetRoutingRequest",
+        "description": "Set multiple output routings at once."
+      },
+      "PresetRoutingResponse": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success"
+          },
+          "applied": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "type": "object",
+            "title": "Applied"
+          },
+          "failed": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object",
+            "title": "Failed",
+            "default": {}
+          }
+        },
+        "type": "object",
+        "required": [
+          "success",
+          "applied"
+        ],
+        "title": "PresetRoutingResponse",
+        "description": "Response after setting preset routing."
+      },
+      "RoutingState": {
+        "properties": {
+          "outputs": {
+            "items": {
+              "$ref": "#/components/schemas/OutputRouting"
+            },
+            "type": "array",
+            "title": "Outputs"
+          },
+          "input_names": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "type": "string"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Input Names",
+            "description": "Custom names for all inputs (1-8)"
+          },
+          "output_names": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "type": "string"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Output Names",
+            "description": "Custom names for all outputs (1-8)"
+          }
+        },
+        "type": "object",
+        "required": [
+          "outputs"
+        ],
+        "title": "RoutingState",
+        "description": "All output routing state."
+      },
+      "SetRoutingRequest": {
+        "properties": {
+          "input": {
+            "type": "integer",
+            "maximum": 8.0,
+            "minimum": 1.0,
+            "title": "Input",
+            "description": "Input number to route (1-8)"
+          }
+        },
+        "type": "object",
+        "required": [
+          "input"
+        ],
+        "title": "SetRoutingRequest",
+        "description": "Set routing for a single output."
+      },
+      "SetRoutingResponse": {
+        "properties": {
+          "output": {
+            "type": "integer",
+            "title": "Output"
+          },
+          "input": {
+            "type": "integer",
+            "title": "Input"
+          },
+          "success": {
+            "type": "boolean",
+            "title": "Success"
+          },
+          "message": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Message"
+          }
+        },
+        "type": "object",
+        "required": [
+          "output",
+          "input",
+          "success"
+        ],
+        "title": "SetRoutingResponse",
+        "description": "Response after setting routing."
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      }
+    }
+  }
+}

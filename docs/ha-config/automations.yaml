@@ -1,0 +1,114 @@
+# HDMI Matrix Proxy - Automations
+# Two-way sync between input selects and matrix routing
+
+# Output 1 automation
+- id: matrix_output_1_changed
+  alias: "HDMI Matrix - Output 1 Changed"
+  trigger:
+    - platform: state
+      entity_id: input_select.matrix_output_1_source
+  condition:
+    - condition: template
+      value_template: "{{ trigger.to_state.state != 'unknown' and trigger.to_state.state != 'unavailable' }}"
+  action:
+    - service: rest_command.matrix_route_output_1
+      data:
+        input: "{{ trigger.to_state.state | int }}"
+
+# Output 2 automation
+- id: matrix_output_2_changed
+  alias: "HDMI Matrix - Output 2 Changed"
+  trigger:
+    - platform: state
+      entity_id: input_select.matrix_output_2_source
+  condition:
+    - condition: template
+      value_template: "{{ trigger.to_state.state != 'unknown' and trigger.to_state.state != 'unavailable' }}"
+  action:
+    - service: rest_command.matrix_route_output_2
+      data:
+        input: "{{ trigger.to_state.state | int }}"
+
+# Output 3 automation
+- id: matrix_output_3_changed
+  alias: "HDMI Matrix - Output 3 Changed"
+  trigger:
+    - platform: state
+      entity_id: input_select.matrix_output_3_source
+  condition:
+    - condition: template
+      value_template: "{{ trigger.to_state.state != 'unknown' and trigger.to_state.state != 'unavailable' }}"
+  action:
+    - service: rest_command.matrix_route_output_3
+      data:
+        input: "{{ trigger.to_state.state | int }}"
+
+# Output 4 automation
+- id: matrix_output_4_changed
+  alias: "HDMI Matrix - Output 4 Changed"
+  trigger:
+    - platform: state
+      entity_id: input_select.matrix_output_4_source
+  condition:
+    - condition: template
+      value_template: "{{ trigger.to_state.state != 'unknown' and trigger.to_state.state != 'unavailable' }}"
+  action:
+    - service: rest_command.matrix_route_output_4
+      data:
+        input: "{{ trigger.to_state.state | int }}"
+
+# Output 5 automation
+- id: matrix_output_5_changed
+  alias: "HDMI Matrix - Output 5 Changed"
+  trigger:
+    - platform: state
+      entity_id: input_select.matrix_output_5_source
+  condition:
+    - condition: template
+      value_template: "{{ trigger.to_state.state != 'unknown' and trigger.to_state.state != 'unavailable' }}"
+  action:
+    - service: rest_command.matrix_route_output_5
+      data:
+        input: "{{ trigger.to_state.state | int }}"
+
+# Output 6 automation
+- id: matrix_output_6_changed
+  alias: "HDMI Matrix - Output 6 Changed"
+  trigger:
+    - platform: state
+      entity_id: input_select.matrix_output_6_source
+  condition:
+    - condition: template
+      value_template: "{{ trigger.to_state.state != 'unknown' and trigger.to_state.state != 'unavailable' }}"
+  action:
+    - service: rest_command.matrix_route_output_6
+      data:
+        input: "{{ trigger.to_state.state | int }}"
+
+# Output 7 automation
+- id: matrix_output_7_changed
+  alias: "HDMI Matrix - Output 7 Changed"
+  trigger:
+    - platform: state
+      entity_id: input_select.matrix_output_7_source
+  condition:
+    - condition: template
+      value_template: "{{ trigger.to_state.state != 'unknown' and trigger.to_state.state != 'unavailable' }}"
+  action:
+    - service: rest_command.matrix_route_output_7
+      data:
+        input: "{{ trigger.to_state.state | int }}"
+
+# Output 8 automation
+- id: matrix_output_8_changed
+  alias: "HDMI Matrix - Output 8 Changed"
+  trigger:
+    - platform: state
+      entity_id: input_select.matrix_output_8_source
+  condition:
+    - condition: template
+      value_template: "{{ trigger.to_state.state != 'unknown' and trigger.to_state.state != 'unavailable' }}"
+  action:
+    - service: rest_command.matrix_route_output_8
+      data:
+        input: "{{ trigger.to_state.state | int }}"

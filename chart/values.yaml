@@ -1,0 +1,89 @@
+# Default values for hdmi-matrix-proxy
+# See https://github.com/willysamz/hdmi-matrix-proxy for documentation
+
+replicaCount: 1
+
+image:
+  repository: ghcr.io/willysamz/hdmi-matrix-proxy
+  pullPolicy: IfNotPresent
+  # Defaults to appVersion from Chart.yaml if not set
+  tag: ""
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+# Matrix configuration
+config:
+  # REQUIRED: Set this to your matrix's web interface URL
+  matrixUrl: "http://matrix.home.willysamz.com"
+  matrixTimeout: "5.0"
+  matrixVerifySsl: "false"
+  matrixHealthInterval: "30"
+
+# Logging configuration
+logging:
+  level: INFO
+  json: true
+
+service:
+  type: ClusterIP
+  port: 8080
+
+# Node selector (optional - no special hardware requirements)
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}
+
+# Pod security context
+podSecurityContext: {}
+
+# Container security context (no special privileges needed)
+securityContext:
+  allowPrivilegeEscalation: false
+  runAsNonRoot: true
+  runAsUser: 1000
+  capabilities:
+    drop:
+      - ALL
+
+# Liveness probe configuration
+livenessProbe:
+  httpGet:
+    path: /healthz/live
+    port: http
+  initialDelaySeconds: 5
+  periodSeconds: 10
+  timeoutSeconds: 5
+  failureThreshold: 3
+
+# Readiness probe configuration
+readinessProbe:
+  httpGet:
+    path: /healthz/ready
+    port: http
+  initialDelaySeconds: 3
+  periodSeconds: 5
+  timeoutSeconds: 5
+  failureThreshold: 3
+
+resources:
+  limits:
+    cpu: 200m
+    memory: 256Mi
+  requests:
+    cpu: 50m
+    memory: 64Mi
+
+# Additional environment variables
+extraEnv: []
+  # - name: EXTRA_VAR
+  #   value: "value"
+
+# Annotations for the pod
+podAnnotations: {}
+
+# Labels for the pod
+podLabels: {}

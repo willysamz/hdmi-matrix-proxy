@@ -1,0 +1,159 @@
+# HDMI Matrix Proxy - Lovelace Dashboard Card
+# Paste this into a Manual Card in your Lovelace dashboard
+
+type: vertical-stack
+cards:
+  # Status and Health
+  - type: entities
+    title: HDMI Matrix Status
+    show_header_toggle: false
+    entities:
+      - entity: sensor.hdmi_matrix_status
+        name: Connection Status
+        icon: mdi:lan-connect
+      - entity: sensor.hdmi_matrix_health
+        name: Health
+        icon: mdi:heart-pulse
+      - type: attribute
+        entity: sensor.hdmi_matrix_health
+        attribute: uptime_seconds
+        name: Uptime (seconds)
+        icon: mdi:clock-outline
+
+  # Current Routing with Custom Names
+  - type: entities
+    title: Current Routing
+    show_header_toggle: false
+    entities:
+      - entity: sensor.matrix_output_1_current_source
+        name: >
+          {{ state_attr('sensor.matrix_output_1_current_source', 'output_name') or 'Output 1' }}
+        secondary_info: last-changed
+        icon: mdi:television
+      - entity: sensor.matrix_output_2_current_source
+        name: >
+          {{ state_attr('sensor.matrix_output_2_current_source', 'output_name') or 'Output 2' }}
+        secondary_info: last-changed
+        icon: mdi:television
+      - entity: sensor.matrix_output_3_current_source
+        name: >
+          {{ state_attr('sensor.matrix_output_3_current_source', 'output_name') or 'Output 3' }}
+        secondary_info: last-changed
+        icon: mdi:television
+      - entity: sensor.matrix_output_4_current_source
+        name: >
+          {{ state_attr('sensor.matrix_output_4_current_source', 'output_name') or 'Output 4' }}
+        secondary_info: last-changed
+        icon: mdi:television
+      - entity: sensor.matrix_output_5_current_source
+        name: >
+          {{ state_attr('sensor.matrix_output_5_current_source', 'output_name') or 'Output 5' }}
+        secondary_info: last-changed
+        icon: mdi:television
+      - entity: sensor.matrix_output_6_current_source
+        name: >
+          {{ state_attr('sensor.matrix_output_6_current_source', 'output_name') or 'Output 6' }}
+        secondary_info: last-changed
+        icon: mdi:television
+      - entity: sensor.matrix_output_7_current_source
+        name: >
+          {{ state_attr('sensor.matrix_output_7_current_source', 'output_name') or 'Output 7' }}
+        secondary_info: last-changed
+        icon: mdi:television
+      - entity: sensor.matrix_output_8_current_source
+        name: >
+          {{ state_attr('sensor.matrix_output_8_current_source', 'output_name') or 'Output 8' }}
+        secondary_info: last-changed
+        icon: mdi:television
+
+  # Manual Routing Control
+  - type: entities
+    title: Manual Routing Control
+    show_header_toggle: false
+    entities:
+      - entity: input_select.matrix_output_1_source
+        name: >
+          {% set names = state_attr('sensor.hdmi_matrix_routing', 'output_names') %}
+          {{ names['1'] if names else 'Output 1' }}
+        icon: mdi:video-input-hdmi
+      - entity: input_select.matrix_output_2_source
+        name: >
+          {% set names = state_attr('sensor.hdmi_matrix_routing', 'output_names') %}
+          {{ names['2'] if names else 'Output 2' }}
+        icon: mdi:video-input-hdmi
+      - entity: input_select.matrix_output_3_source
+        name: >
+          {% set names = state_attr('sensor.hdmi_matrix_routing', 'output_names') %}
+          {{ names['3'] if names else 'Output 3' }}
+        icon: mdi:video-input-hdmi
+      - entity: input_select.matrix_output_4_source
+        name: >
+          {% set names = state_attr('sensor.hdmi_matrix_routing', 'output_names') %}
+          {{ names['4'] if names else 'Output 4' }}
+        icon: mdi:video-input-hdmi
+      - entity: input_select.matrix_output_5_source
+        name: >
+          {% set names = state_attr('sensor.hdmi_matrix_routing', 'output_names') %}
+          {{ names['5'] if names else 'Output 5' }}
+        icon: mdi:video-input-hdmi
+      - entity: input_select.matrix_output_6_source
+        name: >
+          {% set names = state_attr('sensor.hdmi_matrix_routing', 'output_names') %}
+          {{ names['6'] if names else 'Output 6' }}
+        icon: mdi:video-input-hdmi
+      - entity: input_select.matrix_output_7_source
+        name: >
+          {% set names = state_attr('sensor.hdmi_matrix_routing', 'output_names') %}
+          {{ names['7'] if names else 'Output 7' }}
+        icon: mdi:video-input-hdmi
+      - entity: input_select.matrix_output_8_source
+        name: >
+          {% set names = state_attr('sensor.hdmi_matrix_routing', 'output_names') %}
+          {{ names['8'] if names else 'Output 8' }}
+        icon: mdi:video-input-hdmi
+
+  # Preset Scripts
+  - type: entities
+    title: Quick Presets
+    show_header_toggle: false
+    entities:
+      - entity: script.matrix_default_routing
+        name: Default 1:1 Routing
+        icon: mdi:restore
+        tap_action:
+          action: call-service
+          service: script.turn_on
+          service_data:
+            entity_id: script.matrix_default_routing
+      - entity: script.matrix_all_to_input_1
+        name: All to Input 1
+        icon: mdi:numeric-1-box-multiple
+        tap_action:
+          action: call-service
+          service: script.turn_on
+          service_data:
+            entity_id: script.matrix_all_to_input_1
+      - entity: script.matrix_gaming_preset
+        name: Gaming Preset
+        icon: mdi:gamepad-variant
+        tap_action:
+          action: call-service
+          service: script.turn_on
+          service_data:
+            entity_id: script.matrix_gaming_preset
+      - entity: script.matrix_movie_preset
+        name: Movie Preset
+        icon: mdi:movie-open
+        tap_action:
+          action: call-service
+          service: script.turn_on
+          service_data:
+            entity_id: script.matrix_movie_preset
+      - entity: script.matrix_sports_preset
+        name: Sports Preset
+        icon: mdi:basketball
+        tap_action:
+          action: call-service
+          service: script.turn_on
+          service_data:
+            entity_id: script.matrix_sports_preset

@@ -1,0 +1,135 @@
+# HDMI Matrix Proxy - Preset Scripts
+# Quick routing presets for common scenarios
+
+# Default 1:1 routing
+matrix_default_routing:
+  alias: "HDMI Matrix - Default 1:1 Routing"
+  icon: mdi:restore
+  sequence:
+    - service: rest_command.matrix_preset
+      data:
+        mappings: '{"mappings": {"1": 1, "2": 2, "3": 3, "4": 4, "5": 5, "6": 6, "7": 7, "8": 8}}'
+    - delay: "00:00:01"
+    - service: input_select.select_option
+      target:
+        entity_id:
+          - input_select.matrix_output_1_source
+          - input_select.matrix_output_2_source
+          - input_select.matrix_output_3_source
+          - input_select.matrix_output_4_source
+          - input_select.matrix_output_5_source
+          - input_select.matrix_output_6_source
+          - input_select.matrix_output_7_source
+          - input_select.matrix_output_8_source
+      data:
+        option: >
+          {{ ['1', '2', '3', '4', '5', '6', '7', '8'][repeat.index - 1] }}
+
+# All outputs to input 1
+matrix_all_to_input_1:
+  alias: "HDMI Matrix - All Outputs to Input 1"
+  icon: mdi:numeric-1-box-multiple
+  sequence:
+    - service: rest_command.matrix_preset
+      data:
+        mappings: '{"mappings": {"1": 1, "2": 1, "3": 1, "4": 1, "5": 1, "6": 1, "7": 1, "8": 1}}'
+    - delay: "00:00:01"
+    - service: input_select.select_option
+      target:
+        entity_id:
+          - input_select.matrix_output_1_source
+          - input_select.matrix_output_2_source
+          - input_select.matrix_output_3_source
+          - input_select.matrix_output_4_source
+          - input_select.matrix_output_5_source
+          - input_select.matrix_output_6_source
+          - input_select.matrix_output_7_source
+          - input_select.matrix_output_8_source
+      data:
+        option: "1"
+
+# Gaming preset - example routing for gaming setup
+matrix_gaming_preset:
+  alias: "HDMI Matrix - Gaming Preset"
+  icon: mdi:gamepad-variant
+  description: "Routes gaming consoles to main displays"
+  sequence:
+    - service: rest_command.matrix_preset
+      data:
+        # Example: Route inputs 5-6 (consoles) to outputs 1-2 (main TVs)
+        mappings: '{"mappings": {"1": 5, "2": 6, "3": 1, "4": 1}}'
+    - delay: "00:00:01"
+    - service: input_select.select_option
+      data:
+        entity_id: input_select.matrix_output_1_source
+        option: "5"
+    - service: input_select.select_option
+      data:
+        entity_id: input_select.matrix_output_2_source
+        option: "6"
+
+# Movie preset - example routing for movie watching
+matrix_movie_preset:
+  alias: "HDMI Matrix - Movie Preset"
+  icon: mdi:movie-open
+  description: "Routes media players to theater displays"
+  sequence:
+    - service: rest_command.matrix_preset
+      data:
+        # Example: Route input 1 (media player) to outputs 1-4 (theater zone)
+        mappings: '{"mappings": {"1": 1, "2": 1, "3": 1, "4": 1}}'
+    - delay: "00:00:01"
+    - service: input_select.select_option
+      target:
+        entity_id:
+          - input_select.matrix_output_1_source
+          - input_select.matrix_output_2_source
+          - input_select.matrix_output_3_source
+          - input_select.matrix_output_4_source
+      data:
+        option: "1"
+
+# Sports preset - example routing for watching sports
+matrix_sports_preset:
+  alias: "HDMI Matrix - Sports Preset"
+  icon: mdi:basketball
+  description: "Routes cable/streaming to all displays"
+  sequence:
+    - service: rest_command.matrix_preset
+      data:
+        # Example: Route input 2 (cable box) to all outputs
+        mappings: '{"mappings": {"1": 2, "2": 2, "3": 2, "4": 2, "5": 2, "6": 2, "7": 2, "8": 2}}'
+    - delay: "00:00:01"
+    - service: input_select.select_option
+      target:
+        entity_id:
+          - input_select.matrix_output_1_source
+          - input_select.matrix_output_2_source
+          - input_select.matrix_output_3_source
+          - input_select.matrix_output_4_source
+          - input_select.matrix_output_5_source
+          - input_select.matrix_output_6_source
+          - input_select.matrix_output_7_source
+          - input_select.matrix_output_8_source
+      data:
+        option: "2"
+
+# Presentation preset - example for work/presentation setup
+matrix_presentation_preset:
+  alias: "HDMI Matrix - Presentation Preset"
+  icon: mdi:presentation
+  description: "Routes laptop to display outputs"
+  sequence:
+    - service: rest_command.matrix_preset
+      data:
+        # Example: Route input 3 (laptop) to outputs 1-2 (presentation displays)
+        mappings: '{"mappings": {"1": 3, "2": 3}}'
+    - delay: "00:00:01"
+    - service: input_select.select_option
+      data:
+        entity_id: input_select.matrix_output_1_source
+        option: "3"
+    - service: input_select.select_option
+      data:
+        entity_id: input_select.matrix_output_2_source
+        option: "3"
