@@ -161,12 +161,12 @@ def test_set_output_routing_invalid_input(client_with_mock):
 
 
 def test_set_output_routing_invalid_output(client_with_mock):
-    """Test set output routing with invalid output."""
+    """Test set output routing with invalid output number."""
     response = client_with_mock.post(
         "/api/routing/output/99",
         json={"input": 1}
     )
-    assert response.status_code == 422  # Validation error
+    assert response.status_code == 400  # Our validation (path accepts strings for names)
 
 
 def test_set_preset_routing(client_with_mock, mock_matrix_client):
