@@ -74,9 +74,7 @@ class SetRoutingRequest(BaseModel):
     When using a name, it must match a configured input name in the matrix.
     """
 
-    input: int | str = Field(
-        description="Input number (1-8) or input name (e.g., 'PlayStation 5')"
-    )
+    input: int | str = Field(description="Input number (1-8) or input name (e.g., 'PlayStation 5')")
 
 
 class SetRoutingResponse(BaseModel):

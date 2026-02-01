@@ -19,9 +19,7 @@ from app.models import (
 router = APIRouter()
 
 
-async def resolve_input_to_number(
-    input_value: int | str, input_names: dict[int, str]
-) -> int:
+async def resolve_input_to_number(input_value: int | str, input_names: dict[int, str]) -> int:
     """Resolve an input value (number or name) to an input number.
 
     Args:
@@ -58,14 +56,10 @@ async def resolve_input_to_number(
 
     # Name not found - provide helpful error
     available = ", ".join(f'"{n}"' for n in input_names.values())
-    raise ValueError(
-        f'Input name "{input_value}" not found. Available inputs: {available}'
-    )
+    raise ValueError(f'Input name "{input_value}" not found. Available inputs: {available}')
 
 
-async def resolve_output_to_number(
-    output_value: int | str, output_names: dict[int, str]
-) -> int:
+async def resolve_output_to_number(output_value: int | str, output_names: dict[int, str]) -> int:
     """Resolve an output value (number or name) to an output number.
 
     Args:
@@ -102,9 +96,7 @@ async def resolve_output_to_number(
 
     # Name not found - provide helpful error
     available = ", ".join(f'"{n}"' for n in output_names.values())
-    raise ValueError(
-        f'Output name "{output_value}" not found. Available outputs: {available}'
-    )
+    raise ValueError(f'Output name "{output_value}" not found. Available outputs: {available}')
 
 
 @router.get(
@@ -124,8 +116,7 @@ async def get_inputs() -> InputListResponse:
     input_names = await client.get_input_names()
 
     inputs = [
-        InputInfo(number=num, name=input_names.get(num, f"HDMI {num}"))
-        for num in range(1, 9)
+        InputInfo(number=num, name=input_names.get(num, f"HDMI {num}")) for num in range(1, 9)
     ]
 
     return InputListResponse(
@@ -151,8 +142,7 @@ async def get_outputs() -> OutputListResponse:
     output_names = await client.get_output_names()
 
     outputs = [
-        OutputInfo(number=num, name=output_names.get(num, f"Output {num}"))
-        for num in range(1, 9)
+        OutputInfo(number=num, name=output_names.get(num, f"Output {num}")) for num in range(1, 9)
     ]
 
     return OutputListResponse(
