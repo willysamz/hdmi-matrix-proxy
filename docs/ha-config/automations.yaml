@@ -1,7 +1,82 @@
 # HDMI Matrix Proxy - Automations
 # Two-way sync between input selects and matrix routing
+#
+# The API provides all names - no hardcoding needed!
+# - Input names populate dropdown options automatically on startup
+# - Output names are shown via template sensors
+# - Routing sync keeps dropdowns in sync with matrix state
 
-# Sync routing state to input selects (updates dropdowns when matrix changes)
+# ============================================================================
+# Populate dropdown options from API on startup
+# Fetches input names from /api/inputs and updates all input_selects
+# ============================================================================
+- id: matrix_sync_input_names_on_startup
+  alias: "HDMI Matrix - Sync Input Names on Startup"
+  mode: restart
+  trigger:
+    - platform: homeassistant
+      event: start
+    # Also trigger when the inputs sensor updates (in case matrix reconnects)
+    - platform: state
+      entity_id: sensor.hdmi_matrix_inputs
+      attribute: names
+  condition:
+    - condition: template
+      value_template: "{{ state_attr('sensor.hdmi_matrix_inputs', 'names') is not none }}"
+  action:
+    - variables:
+        input_names: "{{ state_attr('sensor.hdmi_matrix_inputs', 'names') }}"
+    # Update all 8 input_selects with the names from the API
+    - service: input_select.set_options
+      target:
+        entity_id: input_select.matrix_output_1_source
+      data:
+        options: "{{ input_names }}"
+    - service: input_select.set_options
+      target:
+        entity_id: input_select.matrix_output_2_source
+      data:
+        options: "{{ input_names }}"
+    - service: input_select.set_options
+      target:
+        entity_id: input_select.matrix_output_3_source
+      data:
+        options: "{{ input_names }}"
+    - service: input_select.set_options
+      target:
+        entity_id: input_select.matrix_output_4_source
+      data:
+        options: "{{ input_names }}"
+    - service: input_select.set_options
+      target:
+        entity_id: input_select.matrix_output_5_source
+      data:
+        options: "{{ input_names }}"
+    - service: input_select.set_options
+      target:
+        entity_id: input_select.matrix_output_6_source
+      data:
+        options: "{{ input_names }}"
+    - service: input_select.set_options
+      target:
+        entity_id: input_select.matrix_output_7_source
+      data:
+        options: "{{ input_names }}"
+    - service: input_select.set_options
+      target:
+        entity_id: input_select.matrix_output_8_source
+      data:
+        options: "{{ input_names }}"
+    # After setting options, sync current routing state
+    - delay: "00:00:01"
+    - service: homeassistant.update_entity
+      target:
+        entity_id: sensor.hdmi_matrix_routing
+
+# ============================================================================
+# Sync routing state from matrix to input selects
+# Updates dropdowns when matrix changes (e.g., physical button press)
+# ============================================================================
 - id: matrix_sync_routing_to_selects
   alias: "HDMI Matrix - Sync Routing to Input Selects"
   mode: queued
@@ -21,9 +96,10 @@
           - variables:
               output_num: "{{ repeat.index }}"
               output_data: "{{ outputs | selectattr('output', 'eq', output_num) | list }}"
-              current_input: >
-                {% if output_data | length > 0 and output_data[0].input %}
-                  {{ output_data[0].input | string }}
+              # Get the input_name directly from the API response
+              current_input_name: >
+                {% if output_data | length > 0 and output_data[0].input_name %}
+                  {{ output_data[0].input_name }}
                 {% else %}
                   {{ states('input_select.matrix_output_' ~ output_num ~ '_source') }}
                 {% endif %}
@@ -31,7 +107,12 @@
             target:
               entity_id: "input_select.matrix_output_{{ output_num }}_source"
             data:
-              option: "{{ current_input }}"
+              option: "{{ current_input_name }}"
+
+# ============================================================================
+# Output Change Automations - Triggered when user changes dropdown
+# Now passes the name directly to the API - no mapping needed!
+# ============================================================================
 
 # Output 1 automation
 - id: matrix_output_1_changed
@@ -50,9 +131,10 @@
     - condition: template
       value_template: "{{ trigger.to_state.context.parent_id == none }}"
   action:
+    # Pass the name directly to the API - it handles the mapping!
     - service: rest_command.matrix_route_output_1
       data:
-        input: "{{ trigger.to_state.state | int }}"
+        input: "{{ trigger.to_state.state }}"
 
 # Output 2 automation
 - id: matrix_output_2_changed
@@ -73,7 +155,7 @@
   action:
     - service: rest_command.matrix_route_output_2
       data:
-        input: "{{ trigger.to_state.state | int }}"
+        input: "{{ trigger.to_state.state }}"
 
 # Output 3 automation
 - id: matrix_output_3_changed
@@ -94,7 +176,7 @@
   action:
     - service: rest_command.matrix_route_output_3
       data:
-        input: "{{ trigger.to_state.state | int }}"
+        input: "{{ trigger.to_state.state }}"
 
 # Output 4 automation
 - id: matrix_output_4_changed
@@ -115,7 +197,7 @@
   action:
     - service: rest_command.matrix_route_output_4
       data:
-        input: "{{ trigger.to_state.state | int }}"
+        input: "{{ trigger.to_state.state }}"
 
 # Output 5 automation
 - id: matrix_output_5_changed
@@ -136,7 +218,7 @@
   action:
     - service: rest_command.matrix_route_output_5
       data:
-        input: "{{ trigger.to_state.state | int }}"
+        input: "{{ trigger.to_state.state }}"
 
 # Output 6 automation
 - id: matrix_output_6_changed
@@ -157,7 +239,7 @@
   action:
     - service: rest_command.matrix_route_output_6
       data:
-        input: "{{ trigger.to_state.state | int }}"
+        input: "{{ trigger.to_state.state }}"
 
 # Output 7 automation
 - id: matrix_output_7_changed
@@ -178,7 +260,7 @@
   action:
     - service: rest_command.matrix_route_output_7
       data:
-        input: "{{ trigger.to_state.state | int }}"
+        input: "{{ trigger.to_state.state }}"
 
 # Output 8 automation
 - id: matrix_output_8_changed
@@ -199,4 +281,4 @@
   action:
     - service: rest_command.matrix_route_output_8
       data:
-        input: "{{ trigger.to_state.state | int }}"
+        input: "{{ trigger.to_state.state }}"

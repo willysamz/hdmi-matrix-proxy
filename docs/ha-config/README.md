@@ -2,74 +2,159 @@
 
 Ready-to-use configuration files for integrating the HDMI Matrix Proxy with Home Assistant.
 
+## Zero Configuration Required
+
+**All names come from the API automatically!** Just:
+
+1. Configure your input/output names in the **matrix web UI**
+2. Copy these files to Home Assistant
+3. Restart - names sync automatically
+
+No need to edit YAML files when you rename devices.
+
+## How It Works
+
+1. **On startup**, an automation fetches input names from `/api/inputs`
+2. **Dropdown options** are populated dynamically via `input_select.set_options`
+3. **Output names** display via template sensors that read from `/api/routing`
+4. **Dashboard cards** reference the template sensors for dynamic names
+
 ## Files
 
 | File | Description |
 |------|-------------|
-| `configuration.yaml` | REST sensors, REST commands, input helpers, template sensors |
-| `automations.yaml` | Two-way sync between input selects and matrix |
+| `configuration.yaml` | REST sensors, REST commands, input_selects (auto-populated), template sensors |
+| `automations.yaml` | Startup sync, routing sync, output change handlers |
 | `scripts.yaml` | Preset routing scripts |
-| `dashboard.yaml` | Lovelace dashboard card with custom names |
+| `dashboard.yaml` | Bubble Card dashboard (requires HACS) |
 
-## Features
+## Prerequisites
 
-- **Custom Names Support**: Automatically displays the custom input/output names you've configured in the matrix web UI
-- **8x8 Matrix Control**: Full control of all 8 inputs and 8 outputs
-- **Template Sensors**: Shows current routing with custom names
-- **Preset Scripts**: Quick routing configurations for common scenarios
+### Install Bubble Card (for dashboard)
+
+1. Install [HACS](https://hacs.xyz/) if you haven't already
+2. Go to HACS → Frontend → Explore & Download
+3. Search for "Bubble Card" and install
+4. Restart Home Assistant
 
 ## Installation
 
-### Option 1: Merge into existing files
+### Option 1: Include Files Directly
 
-Copy the contents of each file into your corresponding Home Assistant config files.
-
-### Option 2: Use includes
-
-Add these to your `configuration.yaml`:
+If you use packages or split configuration:
 
 ```yaml
-# If you use separate files for automations/scripts
-automation: !include automations.yaml
-script: !include scripts.yaml
+# In configuration.yaml
+homeassistant:
+  packages:
+    hdmi_matrix: !include hdmi-matrix/configuration.yaml
+
+automation: !include_dir_merge_list automations/
+script: !include_dir_merge_named scripts/
 ```
 
-Then copy the `rest:`, `rest_command:`, `input_select:`, and `template:` sections from `configuration.yaml` into your main config.
+### Option 2: Merge Into Existing Config
 
-### Dashboard
+Copy the contents of each file into your existing configuration files.
 
-1. Go to your Lovelace dashboard
-2. Click Edit → Add Card → Manual
-3. Paste the contents of `dashboard.yaml`
+### Add Dashboard
 
-## Customization
+1. Go to Settings → Dashboards
+2. Create a new dashboard or edit existing
+3. Switch to YAML mode (three dots → Raw configuration editor)
+4. Paste the desired layout from `dashboard.yaml`
 
-Before using, you may need to update:
+## Configuration
 
-1. **Service URL**: Replace `http://hdmi-matrix-proxy:8080` with your actual proxy address
-2. **Output Names**: The examples use generic names; your actual custom names will be fetched automatically
-3. **Preset Scripts**: Customize the routing presets in `scripts.yaml` to match your needs
+### Service URL
 
-## After Installation
+Update the proxy URL in `configuration.yaml` if needed:
 
-1. **Check Configuration**: Settings → System → Check Configuration
-2. **Restart Home Assistant**
-3. **Verify Sensor**: Check that `sensor.hdmi_matrix_routing` is populating with data
-4. **View Custom Names**: The template sensors should show your custom input/output names
-5. **Create Area** (optional): Create an "HDMI Matrix" area and assign all entities to it
+```yaml
+rest:
+  - resource: "http://YOUR-PROXY-ADDRESS:8080/api/inputs"
+```
 
-## Custom Names
+Replace `hdmi-matrix-proxy` with your actual hostname/IP.
 
-The proxy automatically retrieves custom names from your matrix web UI. These appear in:
+### Customize Presets
 
-- `sensor.hdmi_matrix_routing` attributes (`input_names` and `output_names`)
-- Template sensors that display current source with custom names
-- API responses for programmatic access
+Edit `scripts.yaml` to customize the preset buttons. Use numbers or names:
 
-To set custom names:
-1. Open your matrix web UI (vsw.html)
-2. Check "Modify Name" checkbox
-3. Enter custom names for each input/output
-4. Uncheck "Modify Name" to save
+```yaml
+# Using numbers
+mappings: '{"mappings": {"1": 3, "2": 4}}'
 
-The proxy will fetch these names automatically on every routing query.
+# Using names (must match matrix web UI exactly)
+mappings: '{"mappings": {"Living Room TV": "PlayStation 5", "Bedroom TV": "Apple TV"}}'
+```
+
+## API Reference
+
+### Get Names
+
+```bash
+# Input names (for dropdown options)
+GET /api/inputs
+# Returns: {"inputs": [...], "names": ["Apple TV", "Roku", ...]}
+
+# Output names
+GET /api/outputs  
+# Returns: {"outputs": [...], "names": ["Living Room TV", ...]}
+```
+
+### Set Routing
+
+```bash
+# By number
+POST /api/routing/output/1
+{"input": 3}
+
+# By name (URL-encode spaces)
+POST /api/routing/output/Living%20Room%20TV
+{"input": "PlayStation 5"}
+```
+
+### Preset Routing
+
+```bash
+POST /api/routing/preset
+{"mappings": {"Living Room TV": "Apple TV", "2": 3, "Bedroom TV": "Roku"}}
+```
+
+## Troubleshooting
+
+### Dropdowns show "Loading..."
+
+The startup automation hasn't run yet or the API is unreachable.
+
+1. Check that `sensor.hdmi_matrix_inputs` has data (Developer Tools → States)
+2. Manually trigger: Developer Tools → Services → `automation.trigger` → `matrix_sync_input_names_on_startup`
+
+### Names not updating
+
+1. Verify names in matrix web UI
+2. Check `/api/inputs` returns correct names
+3. Restart Home Assistant to re-trigger startup automation
+
+### Dashboard shows "Unknown" for output names
+
+The routing sensor hasn't loaded yet. Wait for it to refresh or manually update:
+
+Developer Tools → Services → `homeassistant.update_entity` → `sensor.hdmi_matrix_routing`
+
+## Architecture
+
+```
+Matrix Web UI (vsw.html)
+    │
+    ▼ Configure names
+HDMI Matrix Hardware
+    │
+    ▼ Names stored
+HDMI Matrix Proxy API
+    │
+    ├─► /api/inputs  ──► sensor.hdmi_matrix_inputs ──► input_select options
+    ├─► /api/outputs ──► sensor.hdmi_matrix_outputs
+    └─► /api/routing ──► sensor.hdmi_matrix_routing ──► template sensors ──► dashboard
+```

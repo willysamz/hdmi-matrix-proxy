@@ -1,135 +1,140 @@
 # HDMI Matrix Proxy - Preset Scripts
 # Quick routing presets for common scenarios
+#
+# The API accepts names for BOTH outputs AND inputs!
+# Names are fetched from the matrix - configure them in the matrix web UI.
+#
+# Examples:
+#   By numbers:    {"mappings": {"1": 3, "2": 4}}
+#   By names:      {"mappings": {"Living Room TV": "PlayStation 5"}}
+#   Mixed:         {"mappings": {"1": "PlayStation 5", "Living Room TV": 3}}
 
-# Default 1:1 routing
+# ============================================================================
+# Default 1:1 Routing - Each output shows its corresponding input
+# ============================================================================
 matrix_default_routing:
   alias: "HDMI Matrix - Default 1:1 Routing"
   icon: mdi:restore
+  description: "Reset all outputs to default 1:1 mapping (output N → input N)"
   sequence:
     - service: rest_command.matrix_preset
       data:
         mappings: '{"mappings": {"1": 1, "2": 2, "3": 3, "4": 4, "5": 5, "6": 6, "7": 7, "8": 8}}'
-    - delay: "00:00:01"
-    - service: input_select.select_option
+    - delay: "00:00:02"
+    - service: homeassistant.update_entity
       target:
-        entity_id:
-          - input_select.matrix_output_1_source
-          - input_select.matrix_output_2_source
-          - input_select.matrix_output_3_source
-          - input_select.matrix_output_4_source
-          - input_select.matrix_output_5_source
-          - input_select.matrix_output_6_source
-          - input_select.matrix_output_7_source
-          - input_select.matrix_output_8_source
-      data:
-        option: >
-          {{ ['1', '2', '3', '4', '5', '6', '7', '8'][repeat.index - 1] }}
+        entity_id: sensor.hdmi_matrix_routing
 
-# All outputs to input 1
+# ============================================================================
+# All Outputs to Input 1
+# ============================================================================
 matrix_all_to_input_1:
-  alias: "HDMI Matrix - All Outputs to Input 1"
+  alias: "HDMI Matrix - All to Input 1"
   icon: mdi:numeric-1-box-multiple
+  description: "Send Input 1 to all displays"
   sequence:
     - service: rest_command.matrix_preset
       data:
         mappings: '{"mappings": {"1": 1, "2": 1, "3": 1, "4": 1, "5": 1, "6": 1, "7": 1, "8": 1}}'
-    - delay: "00:00:01"
-    - service: input_select.select_option
+    - delay: "00:00:02"
+    - service: homeassistant.update_entity
       target:
-        entity_id:
-          - input_select.matrix_output_1_source
-          - input_select.matrix_output_2_source
-          - input_select.matrix_output_3_source
-          - input_select.matrix_output_4_source
-          - input_select.matrix_output_5_source
-          - input_select.matrix_output_6_source
-          - input_select.matrix_output_7_source
-          - input_select.matrix_output_8_source
-      data:
-        option: "1"
+        entity_id: sensor.hdmi_matrix_routing
 
-# Gaming preset - example routing for gaming setup
+# ============================================================================
+# Gaming Preset - Input 3 to outputs 1 and 3
+# ============================================================================
 matrix_gaming_preset:
-  alias: "HDMI Matrix - Gaming Preset"
+  alias: "HDMI Matrix - Gaming Mode"
   icon: mdi:gamepad-variant
-  description: "Routes gaming consoles to main displays"
+  description: "Route input 3 to outputs 1 and 3"
   sequence:
     - service: rest_command.matrix_preset
       data:
-        # Example: Route inputs 5-6 (consoles) to outputs 1-2 (main TVs)
-        mappings: '{"mappings": {"1": 5, "2": 6, "3": 1, "4": 1}}'
-    - delay: "00:00:01"
-    - service: input_select.select_option
-      data:
-        entity_id: input_select.matrix_output_1_source
-        option: "5"
-    - service: input_select.select_option
-      data:
-        entity_id: input_select.matrix_output_2_source
-        option: "6"
+        mappings: '{"mappings": {"1": 3, "3": 3}}'
+    - delay: "00:00:02"
+    - service: homeassistant.update_entity
+      target:
+        entity_id: sensor.hdmi_matrix_routing
 
-# Movie preset - example routing for movie watching
+# ============================================================================
+# Movie Preset - Input 1 to multiple outputs
+# ============================================================================
 matrix_movie_preset:
-  alias: "HDMI Matrix - Movie Preset"
+  alias: "HDMI Matrix - Movie Night"
   icon: mdi:movie-open
-  description: "Routes media players to theater displays"
+  description: "Route input 1 to outputs 1, 2, and 7"
   sequence:
     - service: rest_command.matrix_preset
       data:
-        # Example: Route input 1 (media player) to outputs 1-4 (theater zone)
-        mappings: '{"mappings": {"1": 1, "2": 1, "3": 1, "4": 1}}'
-    - delay: "00:00:01"
-    - service: input_select.select_option
+        mappings: '{"mappings": {"1": 1, "2": 1, "7": 1}}'
+    - delay: "00:00:02"
+    - service: homeassistant.update_entity
       target:
-        entity_id:
-          - input_select.matrix_output_1_source
-          - input_select.matrix_output_2_source
-          - input_select.matrix_output_3_source
-          - input_select.matrix_output_4_source
-      data:
-        option: "1"
+        entity_id: sensor.hdmi_matrix_routing
 
-# Sports preset - example routing for watching sports
+# ============================================================================
+# Sports Preset - One input to all outputs
+# ============================================================================
 matrix_sports_preset:
-  alias: "HDMI Matrix - Sports Preset"
+  alias: "HDMI Matrix - Sports Mode"
   icon: mdi:basketball
-  description: "Routes cable/streaming to all displays"
+  description: "Route input 2 to all displays"
   sequence:
     - service: rest_command.matrix_preset
       data:
-        # Example: Route input 2 (cable box) to all outputs
         mappings: '{"mappings": {"1": 2, "2": 2, "3": 2, "4": 2, "5": 2, "6": 2, "7": 2, "8": 2}}'
-    - delay: "00:00:01"
-    - service: input_select.select_option
+    - delay: "00:00:02"
+    - service: homeassistant.update_entity
       target:
-        entity_id:
-          - input_select.matrix_output_1_source
-          - input_select.matrix_output_2_source
-          - input_select.matrix_output_3_source
-          - input_select.matrix_output_4_source
-          - input_select.matrix_output_5_source
-          - input_select.matrix_output_6_source
-          - input_select.matrix_output_7_source
-          - input_select.matrix_output_8_source
-      data:
-        option: "2"
+        entity_id: sensor.hdmi_matrix_routing
 
-# Presentation preset - example for work/presentation setup
+# ============================================================================
+# Presentation/Work Preset - Input 7 to outputs 3 and 4
+# ============================================================================
 matrix_presentation_preset:
-  alias: "HDMI Matrix - Presentation Preset"
+  alias: "HDMI Matrix - Work Mode"
   icon: mdi:presentation
-  description: "Routes laptop to display outputs"
+  description: "Route input 7 to outputs 3 and 4"
   sequence:
     - service: rest_command.matrix_preset
       data:
-        # Example: Route input 3 (laptop) to outputs 1-2 (presentation displays)
-        mappings: '{"mappings": {"1": 3, "2": 3}}'
+        mappings: '{"mappings": {"3": 7, "4": 7}}'
+    - delay: "00:00:02"
+    - service: homeassistant.update_entity
+      target:
+        entity_id: sensor.hdmi_matrix_routing
+
+# ============================================================================
+# Generic Route Script - Route any input to any output by name or number
+# Call with: service: script.matrix_route_custom
+#            data:
+#              output: "Living Room TV"  (or number)
+#              input: "PlayStation 5"    (or number)
+# ============================================================================
+matrix_route_custom:
+  alias: "HDMI Matrix - Custom Route"
+  icon: mdi:target
+  description: "Route a specific input to a specific output"
+  fields:
+    output:
+      description: "Output number (1-8) or name from matrix"
+      example: "1"
+      required: true
+      selector:
+        text:
+    input:
+      description: "Input number (1-8) or name from matrix"
+      example: "1"
+      required: true
+      selector:
+        text:
+  sequence:
+    - service: rest_command.matrix_route
+      data:
+        output: "{{ output }}"
+        input: "{{ input }}"
     - delay: "00:00:01"
-    - service: input_select.select_option
-      data:
-        entity_id: input_select.matrix_output_1_source
-        option: "3"
-    - service: input_select.select_option
-      data:
-        entity_id: input_select.matrix_output_2_source
-        option: "3"
+    - service: homeassistant.update_entity
+      target:
+        entity_id: sensor.hdmi_matrix_routing

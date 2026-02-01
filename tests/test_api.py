@@ -111,13 +111,53 @@ def test_set_output_routing(client_with_mock, mock_matrix_client):
     mock_matrix_client.set_routing.assert_called_once_with(input_num=3, output_num=1)
 
 
+def test_set_output_routing_by_name(client_with_mock, mock_matrix_client):
+    """Test set output routing using input name."""
+    response = client_with_mock.post(
+        "/api/routing/output/1",
+        json={"input": "Input C"}  # Name maps to input 3
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["success"] is True
+    assert data["output"] == 1
+    assert data["input"] == 3  # Resolved from name
+    assert data["input_name"] == "Input C"
+    assert data["output_name"] == "TV 1"
+    
+    mock_matrix_client.set_routing.assert_called_once_with(input_num=3, output_num=1)
+
+
+def test_set_output_routing_by_name_case_insensitive(client_with_mock, mock_matrix_client):
+    """Test that name matching is case-insensitive."""
+    response = client_with_mock.post(
+        "/api/routing/output/2",
+        json={"input": "input c"}  # Lowercase
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["success"] is True
+    assert data["input"] == 3
+
+
+def test_set_output_routing_invalid_name(client_with_mock):
+    """Test set output routing with invalid input name."""
+    response = client_with_mock.post(
+        "/api/routing/output/1",
+        json={"input": "Nonexistent Device"}
+    )
+    assert response.status_code == 400
+    data = response.json()
+    assert "not found" in data["detail"].lower()
+
+
 def test_set_output_routing_invalid_input(client_with_mock):
-    """Test set output routing with invalid input."""
+    """Test set output routing with invalid input number."""
     response = client_with_mock.post(
         "/api/routing/output/1",
         json={"input": 99}
     )
-    assert response.status_code == 422  # Validation error
+    assert response.status_code == 400  # Now handled by our validation
 
 
 def test_set_output_routing_invalid_output(client_with_mock):
@@ -141,6 +181,82 @@ def test_set_preset_routing(client_with_mock, mock_matrix_client):
     assert data["success"] is True
     assert len(data["applied"]) == 3
     assert len(data["failed"]) == 0
+
+
+def test_set_preset_routing_with_names(client_with_mock, mock_matrix_client):
+    """Test set preset routing using input names."""
+    mappings = {1: "Input A", 2: "Input B", 3: "Input C"}
+    response = client_with_mock.post(
+        "/api/routing/preset",
+        json={"mappings": mappings}
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["success"] is True
+    assert len(data["applied"]) == 3
+    # Verify names were resolved to numbers
+    assert data["applied"]["1"] == 1
+    assert data["applied"]["2"] == 2
+    assert data["applied"]["3"] == 3
+
+
+def test_set_preset_routing_mixed(client_with_mock, mock_matrix_client):
+    """Test set preset routing with mixed names and numbers."""
+    mappings = {1: "Input A", 2: 2, 3: "Input C"}
+    response = client_with_mock.post(
+        "/api/routing/preset",
+        json={"mappings": mappings}
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["success"] is True
+    assert data["applied"]["1"] == 1
+    assert data["applied"]["2"] == 2
+    assert data["applied"]["3"] == 3
+
+
+def test_set_preset_routing_invalid_name(client_with_mock, mock_matrix_client):
+    """Test set preset routing with invalid input name."""
+    mappings = {1: "Input A", 2: "Bad Name"}
+    response = client_with_mock.post(
+        "/api/routing/preset",
+        json={"mappings": mappings}
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["success"] is False  # Partial failure
+    assert len(data["applied"]) == 1
+    assert len(data["failed"]) == 1
+    assert "2" in data["failed"]
+
+
+def test_set_preset_routing_with_output_names(client_with_mock, mock_matrix_client):
+    """Test set preset routing using output names as keys."""
+    mappings = {"TV 1": "Input A", "TV 2": "Input B"}
+    response = client_with_mock.post(
+        "/api/routing/preset",
+        json={"mappings": mappings}
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["success"] is True
+    assert len(data["applied"]) == 2
+    # Verify names were resolved to numbers
+    assert data["applied"]["1"] == 1
+    assert data["applied"]["2"] == 2
+
+
+def test_set_preset_routing_mixed_output_names(client_with_mock, mock_matrix_client):
+    """Test set preset routing with mixed output names and numbers."""
+    mappings = {"TV 1": "Input A", "2": "Input B", 3: "Input C"}
+    response = client_with_mock.post(
+        "/api/routing/preset",
+        json={"mappings": mappings}
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["success"] is True
+    assert len(data["applied"]) == 3
 
 
 def test_openapi_docs_available(client_with_mock):
@@ -184,3 +300,100 @@ def test_output_routing_includes_names(client_with_mock):
     assert "output_name" in data
     assert data["output_name"] == "TV 1"
     assert data["output"] == 1
+
+
+def test_get_inputs(client_with_mock):
+    """Test get all input names endpoint."""
+    response = client_with_mock.get("/api/inputs")
+    assert response.status_code == 200
+    data = response.json()
+    
+    assert "inputs" in data
+    assert "names" in data
+    assert len(data["inputs"]) == 8
+    assert len(data["names"]) == 8
+    
+    # Check structure
+    first_input = data["inputs"][0]
+    assert "number" in first_input
+    assert "name" in first_input
+    assert first_input["number"] == 1
+    assert first_input["name"] == "Input A"
+    
+    # Check names list (for dropdown options)
+    assert "Input A" in data["names"]
+    assert "Input H" in data["names"]
+
+
+def test_get_outputs(client_with_mock):
+    """Test get all output names endpoint."""
+    response = client_with_mock.get("/api/outputs")
+    assert response.status_code == 200
+    data = response.json()
+    
+    assert "outputs" in data
+    assert "names" in data
+    assert len(data["outputs"]) == 8
+    assert len(data["names"]) == 8
+    
+    # Check structure
+    first_output = data["outputs"][0]
+    assert "number" in first_output
+    assert "name" in first_output
+    assert first_output["number"] == 1
+    assert first_output["name"] == "TV 1"
+    
+    # Check names list
+    assert "TV 1" in data["names"]
+    assert "TV 8" in data["names"]
+
+
+def test_set_routing_response_includes_names(client_with_mock, mock_matrix_client):
+    """Test that set routing response includes names."""
+    response = client_with_mock.post(
+        "/api/routing/output/1",
+        json={"input": 3}
+    )
+    assert response.status_code == 200
+    data = response.json()
+    
+    assert data["input_name"] == "Input C"
+    assert data["output_name"] == "TV 1"
+    assert "Routed Input C to TV 1" in data["message"]
+
+
+def test_get_output_routing_by_name(client_with_mock):
+    """Test get output routing using output name in URL."""
+    response = client_with_mock.get("/api/routing/output/TV%201")
+    assert response.status_code == 200
+    data = response.json()
+    assert data["output"] == 1
+    assert data["output_name"] == "TV 1"
+
+
+def test_set_output_routing_by_output_name(client_with_mock, mock_matrix_client):
+    """Test set output routing using output name in URL."""
+    response = client_with_mock.post(
+        "/api/routing/output/TV%202",
+        json={"input": "Input C"}
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["success"] is True
+    assert data["output"] == 2
+    assert data["output_name"] == "TV 2"
+    assert data["input"] == 3
+    assert data["input_name"] == "Input C"
+    
+    mock_matrix_client.set_routing.assert_called_once_with(input_num=3, output_num=2)
+
+
+def test_set_output_routing_invalid_output_name(client_with_mock):
+    """Test set output routing with invalid output name."""
+    response = client_with_mock.post(
+        "/api/routing/output/Nonexistent%20TV",
+        json={"input": 1}
+    )
+    assert response.status_code == 400
+    data = response.json()
+    assert "not found" in data["detail"].lower()

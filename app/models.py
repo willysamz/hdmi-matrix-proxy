@@ -68,25 +68,38 @@ class RoutingState(BaseModel):
 
 
 class SetRoutingRequest(BaseModel):
-    """Set routing for a single output."""
+    """Set routing for a single output.
 
-    input: int = Field(ge=1, le=8, description="Input number to route (1-8)")
+    Accepts either an input number (1-8) or an input name (e.g., "PlayStation 5").
+    When using a name, it must match a configured input name in the matrix.
+    """
+
+    input: int | str = Field(
+        description="Input number (1-8) or input name (e.g., 'PlayStation 5')"
+    )
 
 
 class SetRoutingResponse(BaseModel):
     """Response after setting routing."""
 
     output: int
+    output_name: str | None = None
     input: int
+    input_name: str | None = None
     success: bool
     message: str | None = None
 
 
 class PresetRoutingRequest(BaseModel):
-    """Set multiple output routings at once."""
+    """Set multiple output routings at once.
 
-    mappings: dict[int, int] = Field(
-        description="Dictionary of output->input mappings (e.g., {1: 1, 2: 2, 3: 3})"
+    Both outputs and inputs can be specified by number or name.
+    """
+
+    mappings: dict[int | str, int | str] = Field(
+        description="Dictionary of output->input mappings. "
+        "Both outputs and inputs can be numbers or names "
+        '(e.g., {"Living Room TV": "Apple TV", "2": "PlayStation 5", "3": 3})'
     )
 
 
@@ -94,29 +107,38 @@ class PresetRoutingResponse(BaseModel):
     """Response after setting preset routing."""
 
     success: bool
-    applied: dict[int, int]
-    failed: dict[int, str] = {}
+    applied: dict[int, int] = Field(
+        description="Successfully applied mappings (output_num -> input_num)"
+    )
+    failed: dict[str, str] = Field(
+        default={},
+        description="Failed mappings with error messages (original_key -> error)",
+    )
 
 
-# Mappings for friendly names
-INPUT_NAMES = {
-    1: "hdmi_1",
-    2: "hdmi_2",
-    3: "hdmi_3",
-    4: "hdmi_4",
-    5: "hdmi_5",
-    6: "hdmi_6",
-    7: "hdmi_7",
-    8: "hdmi_8",
-}
+class InputInfo(BaseModel):
+    """Information about a single input."""
 
-OUTPUT_NAMES = {
-    1: "output_1",
-    2: "output_2",
-    3: "output_3",
-    4: "output_4",
-    5: "output_5",
-    6: "output_6",
-    7: "output_7",
-    8: "output_8",
-}
+    number: int = Field(ge=1, le=8, description="Input number (1-8)")
+    name: str = Field(description="Input name (configured in matrix)")
+
+
+class OutputInfo(BaseModel):
+    """Information about a single output."""
+
+    number: int = Field(ge=1, le=8, description="Output number (1-8)")
+    name: str = Field(description="Output name (configured in matrix)")
+
+
+class InputListResponse(BaseModel):
+    """List of all inputs with their names."""
+
+    inputs: list[InputInfo]
+    names: list[str] = Field(description="Just the names (for dropdown options)")
+
+
+class OutputListResponse(BaseModel):
+    """List of all outputs with their names."""
+
+    outputs: list[OutputInfo]
+    names: list[str] = Field(description="Just the names (for dropdown options)")
