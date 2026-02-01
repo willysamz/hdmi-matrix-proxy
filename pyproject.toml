@@ -1,6 +1,6 @@
 [project]
 name = "hdmi-matrix-proxy"
-version = "0.1.9"
+version = "0.1.10"
 description = "REST API proxy for MT-VIKI MT-H8M88 HDMI matrix HTTP control"
 requires-python = ">=3.11"
 
