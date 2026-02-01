@@ -1,9 +1,9 @@
 # HDMI Matrix Proxy - Bubble Card Dashboard
 # Requires: Bubble Card integration (HACS)
 #
-# All names come from the API - no hardcoding needed!
-# - Input names populate dropdown options (via automation)
-# - Output names shown via template sensors
+# All names come from the API dynamically!
+# - Input names populate dropdown options (via automation on startup)
+# - Output names displayed via Bubble Card's JavaScript templates
 
 # ============================================================================
 # MAIN DASHBOARD - Full Layout
@@ -139,107 +139,107 @@ cards:
             color: rgb(76, 175, 80) !important;
           }
 
-  # Output Routing Controls - Names come from template sensors
+  # Output Routing Controls
   - type: custom:bubble-card
     card_type: separator
     name: Output Routing
     icon: mdi:television
 
-  # Output 1 - Name from sensor attribute
+  # Output 1
   - type: custom:bubble-card
     card_type: select
     entity: input_select.matrix_output_1_source
-    name: "{{ state_attr('sensor.matrix_output_1_current_source', 'output_name') }}"
     icon: mdi:television
     show_state: true
     styles: |
       .bubble-select-card-container {
         background: rgba(var(--rgb-primary-color), 0.05) !important;
       }
+      ${card.querySelector('.bubble-name').innerText = hass.states['sensor.matrix_output_1_current_source']?.attributes?.output_name || 'Output 1'}
 
   # Output 2
   - type: custom:bubble-card
     card_type: select
     entity: input_select.matrix_output_2_source
-    name: "{{ state_attr('sensor.matrix_output_2_current_source', 'output_name') }}"
     icon: mdi:television
     show_state: true
     styles: |
       .bubble-select-card-container {
         background: rgba(var(--rgb-primary-color), 0.05) !important;
       }
+      ${card.querySelector('.bubble-name').innerText = hass.states['sensor.matrix_output_2_current_source']?.attributes?.output_name || 'Output 2'}
 
   # Output 3
   - type: custom:bubble-card
     card_type: select
     entity: input_select.matrix_output_3_source
-    name: "{{ state_attr('sensor.matrix_output_3_current_source', 'output_name') }}"
     icon: mdi:monitor
     show_state: true
     styles: |
       .bubble-select-card-container {
         background: rgba(var(--rgb-primary-color), 0.05) !important;
       }
+      ${card.querySelector('.bubble-name').innerText = hass.states['sensor.matrix_output_3_current_source']?.attributes?.output_name || 'Output 3'}
 
   # Output 4
   - type: custom:bubble-card
     card_type: select
     entity: input_select.matrix_output_4_source
-    name: "{{ state_attr('sensor.matrix_output_4_current_source', 'output_name') }}"
     icon: mdi:television
     show_state: true
     styles: |
       .bubble-select-card-container {
         background: rgba(var(--rgb-primary-color), 0.05) !important;
       }
+      ${card.querySelector('.bubble-name').innerText = hass.states['sensor.matrix_output_4_current_source']?.attributes?.output_name || 'Output 4'}
 
   # Output 5
   - type: custom:bubble-card
     card_type: select
     entity: input_select.matrix_output_5_source
-    name: "{{ state_attr('sensor.matrix_output_5_current_source', 'output_name') }}"
     icon: mdi:television
     show_state: true
     styles: |
       .bubble-select-card-container {
         background: rgba(var(--rgb-primary-color), 0.05) !important;
       }
+      ${card.querySelector('.bubble-name').innerText = hass.states['sensor.matrix_output_5_current_source']?.attributes?.output_name || 'Output 5'}
 
   # Output 6
   - type: custom:bubble-card
     card_type: select
     entity: input_select.matrix_output_6_source
-    name: "{{ state_attr('sensor.matrix_output_6_current_source', 'output_name') }}"
     icon: mdi:television
     show_state: true
     styles: |
       .bubble-select-card-container {
         background: rgba(var(--rgb-primary-color), 0.05) !important;
       }
+      ${card.querySelector('.bubble-name').innerText = hass.states['sensor.matrix_output_6_current_source']?.attributes?.output_name || 'Output 6'}
 
   # Output 7
   - type: custom:bubble-card
     card_type: select
     entity: input_select.matrix_output_7_source
-    name: "{{ state_attr('sensor.matrix_output_7_current_source', 'output_name') }}"
     icon: mdi:television
     show_state: true
     styles: |
       .bubble-select-card-container {
         background: rgba(var(--rgb-primary-color), 0.05) !important;
       }
+      ${card.querySelector('.bubble-name').innerText = hass.states['sensor.matrix_output_7_current_source']?.attributes?.output_name || 'Output 7'}
 
   # Output 8
   - type: custom:bubble-card
     card_type: select
     entity: input_select.matrix_output_8_source
-    name: "{{ state_attr('sensor.matrix_output_8_current_source', 'output_name') }}"
     icon: mdi:television
     show_state: true
     styles: |
       .bubble-select-card-container {
         background: rgba(var(--rgb-primary-color), 0.05) !important;
       }
+      ${card.querySelector('.bubble-name').innerText = hass.states['sensor.matrix_output_8_current_source']?.attributes?.output_name || 'Output 8'}
 
 ---
 # ============================================================================
@@ -310,7 +310,7 @@ cards:
           service_data:
             entity_id: script.matrix_sports_preset
 
-  # Compact 2-Column Output Grid - Names from template sensors
+  # Compact 2-Column Output Grid
   - type: grid
     columns: 2
     square: false
@@ -318,188 +318,397 @@ cards:
       - type: custom:bubble-card
         card_type: select
         entity: input_select.matrix_output_1_source
-        name: "{{ state_attr('sensor.matrix_output_1_current_source', 'output_name') }}"
         icon: mdi:television
+        styles: |
+          ${card.querySelector('.bubble-name').innerText = hass.states['sensor.matrix_output_1_current_source']?.attributes?.output_name || 'Output 1'}
 
       - type: custom:bubble-card
         card_type: select
         entity: input_select.matrix_output_2_source
-        name: "{{ state_attr('sensor.matrix_output_2_current_source', 'output_name') }}"
         icon: mdi:television
+        styles: |
+          ${card.querySelector('.bubble-name').innerText = hass.states['sensor.matrix_output_2_current_source']?.attributes?.output_name || 'Output 2'}
 
       - type: custom:bubble-card
         card_type: select
         entity: input_select.matrix_output_3_source
-        name: "{{ state_attr('sensor.matrix_output_3_current_source', 'output_name') }}"
         icon: mdi:monitor
+        styles: |
+          ${card.querySelector('.bubble-name').innerText = hass.states['sensor.matrix_output_3_current_source']?.attributes?.output_name || 'Output 3'}
 
       - type: custom:bubble-card
         card_type: select
         entity: input_select.matrix_output_4_source
-        name: "{{ state_attr('sensor.matrix_output_4_current_source', 'output_name') }}"
         icon: mdi:television
+        styles: |
+          ${card.querySelector('.bubble-name').innerText = hass.states['sensor.matrix_output_4_current_source']?.attributes?.output_name || 'Output 4'}
 
       - type: custom:bubble-card
         card_type: select
         entity: input_select.matrix_output_5_source
-        name: "{{ state_attr('sensor.matrix_output_5_current_source', 'output_name') }}"
         icon: mdi:television
+        styles: |
+          ${card.querySelector('.bubble-name').innerText = hass.states['sensor.matrix_output_5_current_source']?.attributes?.output_name || 'Output 5'}
 
       - type: custom:bubble-card
         card_type: select
         entity: input_select.matrix_output_6_source
-        name: "{{ state_attr('sensor.matrix_output_6_current_source', 'output_name') }}"
         icon: mdi:television
+        styles: |
+          ${card.querySelector('.bubble-name').innerText = hass.states['sensor.matrix_output_6_current_source']?.attributes?.output_name || 'Output 6'}
 
       - type: custom:bubble-card
         card_type: select
         entity: input_select.matrix_output_7_source
-        name: "{{ state_attr('sensor.matrix_output_7_current_source', 'output_name') }}"
         icon: mdi:television
+        styles: |
+          ${card.querySelector('.bubble-name').innerText = hass.states['sensor.matrix_output_7_current_source']?.attributes?.output_name || 'Output 7'}
 
       - type: custom:bubble-card
         card_type: select
         entity: input_select.matrix_output_8_source
-        name: "{{ state_attr('sensor.matrix_output_8_current_source', 'output_name') }}"
         icon: mdi:television
+        styles: |
+          ${card.querySelector('.bubble-name').innerText = hass.states['sensor.matrix_output_8_current_source']?.attributes?.output_name || 'Output 8'}
 
 ---
 # ============================================================================
-# ALTERNATIVE: Pop-up Style
-# Add a floating button that opens a full control panel
+# ALTERNATIVE: Pop-up Style (standalone card - add to any view)
+# This format is for adding the pop-up as a single card
+# ============================================================================
+# NOTE: This alternative style requires a vertical-stack wrapper.
+# See the COMPLETE POP-UP EXAMPLE section below for a ready-to-use version.
+
+type: vertical-stack
+cards:
+  - type: custom:bubble-card
+    card_type: pop-up
+    hash: '#hdmi-matrix-alt'
+    name: HDMI Matrix
+    icon: mdi:video-switch
+    entity: sensor.hdmi_matrix_status
+  - type: horizontal-stack
+    cards:
+      - type: custom:bubble-card
+        card_type: button
+        entity: sensor.hdmi_matrix_status
+        name: Status
+        icon: mdi:lan-connect
+        show_state: true
+        button_type: state
+      - type: custom:bubble-card
+        card_type: button
+        entity: sensor.hdmi_matrix_health
+        name: Health
+        icon: mdi:heart-pulse
+        show_state: true
+        button_type: state
+
+  - type: custom:bubble-card
+    card_type: separator
+    name: Presets
+
+  - type: horizontal-stack
+    cards:
+      - type: custom:bubble-card
+        card_type: button
+        entity: script.matrix_default_routing
+        name: Default
+        icon: mdi:restore
+        button_type: name
+        tap_action:
+          action: call-service
+          service: script.turn_on
+          service_data:
+            entity_id: script.matrix_default_routing
+      - type: custom:bubble-card
+        card_type: button
+        entity: script.matrix_gaming_preset
+        name: Gaming
+        icon: mdi:gamepad-variant
+        button_type: name
+        tap_action:
+          action: call-service
+          service: script.turn_on
+          service_data:
+            entity_id: script.matrix_gaming_preset
+      - type: custom:bubble-card
+        card_type: button
+        entity: script.matrix_movie_preset
+        name: Movie
+        icon: mdi:movie-open
+        button_type: name
+        tap_action:
+          action: call-service
+          service: script.turn_on
+          service_data:
+            entity_id: script.matrix_movie_preset
+      - type: custom:bubble-card
+        card_type: button
+        entity: script.matrix_sports_preset
+        name: Sports
+        icon: mdi:basketball
+        button_type: name
+        tap_action:
+          action: call-service
+          service: script.turn_on
+          service_data:
+            entity_id: script.matrix_sports_preset
+
+  - type: custom:bubble-card
+    card_type: separator
+    name: Outputs
+
+  - type: custom:bubble-card
+    card_type: select
+    entity: input_select.matrix_output_1_source
+    icon: mdi:television
+    styles: |
+      ${card.querySelector('.bubble-name').innerText = hass.states['sensor.matrix_output_1_current_source']?.attributes?.output_name || 'Output 1'}
+
+  - type: custom:bubble-card
+    card_type: select
+    entity: input_select.matrix_output_2_source
+    icon: mdi:television
+    styles: |
+      ${card.querySelector('.bubble-name').innerText = hass.states['sensor.matrix_output_2_current_source']?.attributes?.output_name || 'Output 2'}
+
+  - type: custom:bubble-card
+    card_type: select
+    entity: input_select.matrix_output_3_source
+    icon: mdi:monitor
+    styles: |
+      ${card.querySelector('.bubble-name').innerText = hass.states['sensor.matrix_output_3_current_source']?.attributes?.output_name || 'Output 3'}
+
+  - type: custom:bubble-card
+    card_type: select
+    entity: input_select.matrix_output_4_source
+    icon: mdi:television
+    styles: |
+      ${card.querySelector('.bubble-name').innerText = hass.states['sensor.matrix_output_4_current_source']?.attributes?.output_name || 'Output 4'}
+
+  - type: custom:bubble-card
+    card_type: select
+    entity: input_select.matrix_output_5_source
+    icon: mdi:television
+    styles: |
+      ${card.querySelector('.bubble-name').innerText = hass.states['sensor.matrix_output_5_current_source']?.attributes?.output_name || 'Output 5'}
+
+  - type: custom:bubble-card
+    card_type: select
+    entity: input_select.matrix_output_6_source
+    icon: mdi:television
+    styles: |
+      ${card.querySelector('.bubble-name').innerText = hass.states['sensor.matrix_output_6_current_source']?.attributes?.output_name || 'Output 6'}
+
+  - type: custom:bubble-card
+    card_type: select
+    entity: input_select.matrix_output_7_source
+    icon: mdi:television
+    styles: |
+      ${card.querySelector('.bubble-name').innerText = hass.states['sensor.matrix_output_7_current_source']?.attributes?.output_name || 'Output 7'}
+
+  - type: custom:bubble-card
+    card_type: select
+    entity: input_select.matrix_output_8_source
+    icon: mdi:television
+    styles: |
+      ${card.querySelector('.bubble-name').innerText = hass.states['sensor.matrix_output_8_current_source']?.attributes?.output_name || 'Output 8'}
+
+---
+# ============================================================================
+# COMPLETE POP-UP EXAMPLE - Copy this entire section
+# ============================================================================
+#
+# HOW TO USE:
+# 1. Go to Settings → Dashboards → Add Dashboard (or use existing)
+# 2. Open the dashboard, click the 3-dot menu → Edit Dashboard
+# 3. Click the 3-dot menu again → Raw configuration editor
+# 4. Replace everything with this YAML
+# 5. Click Save, then X to exit edit mode
+#
+# The floating button appears in the bottom-right corner.
+# Tap it to open the HDMI Matrix control panel.
 # ============================================================================
 
-type: custom:bubble-card
-card_type: pop-up
-hash: "#hdmi-matrix"
-name: HDMI Matrix
-icon: mdi:video-switch
-show_header: true
-bg_blur: 10
-margin_top_mobile: 10vh
-styles: |
-  .bubble-pop-up {
-    background: var(--card-background-color) !important;
-  }
-card:
-  type: vertical-stack
-  cards:
-    - type: horizontal-stack
-      cards:
-        - type: custom:bubble-card
-          card_type: button
-          entity: sensor.hdmi_matrix_status
-          name: Status
-          icon: mdi:lan-connect
-          show_state: true
-          button_type: state
-        - type: custom:bubble-card
-          card_type: button
-          entity: sensor.hdmi_matrix_health
-          name: Health
-          icon: mdi:heart-pulse
-          show_state: true
-          button_type: state
+views:
+  - title: Home
+    path: home
+    cards:
+      # =============================================
+      # POP-UP - Must be FIRST card in the view
+      # The pop-up must be inside a vertical-stack
+      # =============================================
+      - type: vertical-stack
+        cards:
+          - type: custom:bubble-card
+            card_type: pop-up
+            hash: '#hdmi-matrix'
+            name: HDMI Matrix
+            icon: mdi:video-switch
+            entity: sensor.hdmi_matrix_status
+          - type: custom:bubble-card
+            card_type: separator
+            name: Status
 
-    - type: custom:bubble-card
-      card_type: separator
-      name: Presets
+          - type: horizontal-stack
+            cards:
+              - type: custom:bubble-card
+                card_type: button
+                entity: sensor.hdmi_matrix_status
+                name: Status
+                icon: mdi:lan-connect
+                show_state: true
+                button_type: state
+              - type: custom:bubble-card
+                card_type: button
+                entity: sensor.hdmi_matrix_health
+                name: Health
+                icon: mdi:heart-pulse
+                show_state: true
+                button_type: state
 
-    - type: horizontal-stack
-      cards:
-        - type: custom:bubble-card
-          card_type: button
-          entity: script.matrix_default_routing
-          name: Default
-          icon: mdi:restore
-          button_type: call-service
+          - type: custom:bubble-card
+            card_type: separator
+            name: Presets
+
+          - type: horizontal-stack
+            cards:
+              - type: custom:bubble-card
+                card_type: button
+                entity: script.matrix_default_routing
+                name: Default
+                icon: mdi:restore
+                button_type: name
+                tap_action:
+                  action: call-service
+                  service: script.turn_on
+                  service_data:
+                    entity_id: script.matrix_default_routing
+              - type: custom:bubble-card
+                card_type: button
+                entity: script.matrix_gaming_preset
+                name: Gaming
+                icon: mdi:gamepad-variant
+                button_type: name
+                tap_action:
+                  action: call-service
+                  service: script.turn_on
+                  service_data:
+                    entity_id: script.matrix_gaming_preset
+              - type: custom:bubble-card
+                card_type: button
+                entity: script.matrix_movie_preset
+                name: Movie
+                icon: mdi:movie-open
+                button_type: name
+                tap_action:
+                  action: call-service
+                  service: script.turn_on
+                  service_data:
+                    entity_id: script.matrix_movie_preset
+
+          - type: custom:bubble-card
+            card_type: separator
+            name: Outputs
+
+          - type: custom:bubble-card
+            card_type: select
+            entity: input_select.matrix_output_1_source
+            icon: mdi:television
+            show_state: true
+            styles: |
+              ${card.querySelector('.bubble-name').innerText = hass.states['sensor.matrix_output_1_current_source']?.attributes?.output_name || 'Output 1'}
+
+          - type: custom:bubble-card
+            card_type: select
+            entity: input_select.matrix_output_2_source
+            icon: mdi:television
+            show_state: true
+            styles: |
+              ${card.querySelector('.bubble-name').innerText = hass.states['sensor.matrix_output_2_current_source']?.attributes?.output_name || 'Output 2'}
+
+          - type: custom:bubble-card
+            card_type: select
+            entity: input_select.matrix_output_3_source
+            icon: mdi:monitor
+            show_state: true
+            styles: |
+              ${card.querySelector('.bubble-name').innerText = hass.states['sensor.matrix_output_3_current_source']?.attributes?.output_name || 'Output 3'}
+
+          - type: custom:bubble-card
+            card_type: select
+            entity: input_select.matrix_output_4_source
+            icon: mdi:television
+            show_state: true
+            styles: |
+              ${card.querySelector('.bubble-name').innerText = hass.states['sensor.matrix_output_4_current_source']?.attributes?.output_name || 'Output 4'}
+
+          - type: custom:bubble-card
+            card_type: select
+            entity: input_select.matrix_output_5_source
+            icon: mdi:television
+            show_state: true
+            styles: |
+              ${card.querySelector('.bubble-name').innerText = hass.states['sensor.matrix_output_5_current_source']?.attributes?.output_name || 'Output 5'}
+
+          - type: custom:bubble-card
+            card_type: select
+            entity: input_select.matrix_output_6_source
+            icon: mdi:television
+            show_state: true
+            styles: |
+              ${card.querySelector('.bubble-name').innerText = hass.states['sensor.matrix_output_6_current_source']?.attributes?.output_name || 'Output 6'}
+
+          - type: custom:bubble-card
+            card_type: select
+            entity: input_select.matrix_output_7_source
+            icon: mdi:television
+            show_state: true
+            styles: |
+              ${card.querySelector('.bubble-name').innerText = hass.states['sensor.matrix_output_7_current_source']?.attributes?.output_name || 'Output 7'}
+
+          - type: custom:bubble-card
+            card_type: select
+            entity: input_select.matrix_output_8_source
+            icon: mdi:television
+            show_state: true
+            styles: |
+              ${card.querySelector('.bubble-name').innerText = hass.states['sensor.matrix_output_8_current_source']?.attributes?.output_name || 'Output 8'}
+
+      # =============================================
+      # FLOATING BUTTON - Opens the pop-up
+      # =============================================
+      - type: custom:bubble-card
+        card_type: button
+        entity: sensor.hdmi_matrix_status
+        button_type: name
+        name: ""
+        icon: mdi:video-switch
+        show_name: false
+        show_state: false
+        tap_action:
+          action: navigate
+          navigation_path: '#hdmi-matrix'
+        button_action:
           tap_action:
-            action: call-service
-            service: script.turn_on
-            service_data:
-              entity_id: script.matrix_default_routing
-        - type: custom:bubble-card
-          card_type: button
-          entity: script.matrix_gaming_preset
-          name: Gaming
-          icon: mdi:gamepad-variant
-          button_type: call-service
-          tap_action:
-            action: call-service
-            service: script.turn_on
-            service_data:
-              entity_id: script.matrix_gaming_preset
-        - type: custom:bubble-card
-          card_type: button
-          entity: script.matrix_movie_preset
-          name: Movie
-          icon: mdi:movie-open
-          button_type: call-service
-          tap_action:
-            action: call-service
-            service: script.turn_on
-            service_data:
-              entity_id: script.matrix_movie_preset
-        - type: custom:bubble-card
-          card_type: button
-          entity: script.matrix_sports_preset
-          name: Sports
-          icon: mdi:basketball
-          button_type: call-service
-          tap_action:
-            action: call-service
-            service: script.turn_on
-            service_data:
-              entity_id: script.matrix_sports_preset
-
-    - type: custom:bubble-card
-      card_type: separator
-      name: Outputs
-
-    - type: custom:bubble-card
-      card_type: select
-      entity: input_select.matrix_output_1_source
-      name: "{{ state_attr('sensor.matrix_output_1_current_source', 'output_name') }}"
-      icon: mdi:television
-
-    - type: custom:bubble-card
-      card_type: select
-      entity: input_select.matrix_output_2_source
-      name: "{{ state_attr('sensor.matrix_output_2_current_source', 'output_name') }}"
-      icon: mdi:television
-
-    - type: custom:bubble-card
-      card_type: select
-      entity: input_select.matrix_output_3_source
-      name: "{{ state_attr('sensor.matrix_output_3_current_source', 'output_name') }}"
-      icon: mdi:monitor
-
-    - type: custom:bubble-card
-      card_type: select
-      entity: input_select.matrix_output_4_source
-      name: "{{ state_attr('sensor.matrix_output_4_current_source', 'output_name') }}"
-      icon: mdi:television
-
-    - type: custom:bubble-card
-      card_type: select
-      entity: input_select.matrix_output_5_source
-      name: "{{ state_attr('sensor.matrix_output_5_current_source', 'output_name') }}"
-      icon: mdi:television
-
-    - type: custom:bubble-card
-      card_type: select
-      entity: input_select.matrix_output_6_source
-      name: "{{ state_attr('sensor.matrix_output_6_current_source', 'output_name') }}"
-      icon: mdi:television
-
-    - type: custom:bubble-card
-      card_type: select
-      entity: input_select.matrix_output_7_source
-      name: "{{ state_attr('sensor.matrix_output_7_current_source', 'output_name') }}"
-      icon: mdi:television
-
-    - type: custom:bubble-card
-      card_type: select
-      entity: input_select.matrix_output_8_source
-      name: "{{ state_attr('sensor.matrix_output_8_current_source', 'output_name') }}"
-      icon: mdi:television
+            action: navigate
+            navigation_path: '#hdmi-matrix'
+        styles: |
+          .bubble-button-card-container {
+            position: fixed !important;
+            bottom: 80px;
+            right: 24px;
+            width: 56px;
+            height: 56px;
+            border-radius: 50%;
+            z-index: 5;
+            background: var(--primary-color) !important;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+          }
+          .bubble-icon-container {
+            --mdc-icon-size: 28px;
+          }
+          .bubble-name, .bubble-state {
+            display: none !important;
+          }

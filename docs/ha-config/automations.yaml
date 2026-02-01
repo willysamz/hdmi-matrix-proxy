@@ -67,15 +67,37 @@
         entity_id: input_select.matrix_output_8_source
       data:
         options: "{{ input_names }}"
-    # After setting options, sync current routing state
-    - delay: "00:00:01"
+    # After setting options, sync current routing state to dropdowns
+    - delay: "00:00:02"
     - service: homeassistant.update_entity
       target:
         entity_id: sensor.hdmi_matrix_routing
+    # Wait for sensor to update, then sync each dropdown to current routing
+    - delay: "00:00:02"
+    - variables:
+        outputs: "{{ state_attr('sensor.hdmi_matrix_routing', 'outputs') }}"
+    - repeat:
+        count: 8
+        sequence:
+          - variables:
+              output_num: "{{ repeat.index }}"
+              output_data: "{{ outputs | selectattr('output', 'eq', output_num) | list if outputs else [] }}"
+              current_input_name: >
+                {% if output_data | length > 0 and output_data[0].input_name %}
+                  {{ output_data[0].input_name }}
+                {% else %}
+                  {{ (state_attr('sensor.hdmi_matrix_inputs', 'names') or ['Loading...'])[0] }}
+                {% endif %}
+          - service: input_select.select_option
+            target:
+              entity_id: "input_select.matrix_output_{{ output_num }}_source"
+            data:
+              option: "{{ current_input_name }}"
 
 # ============================================================================
 # Sync routing state from matrix to input selects
-# Updates dropdowns when matrix changes (e.g., physical button press)
+# Updates dropdowns when matrix changes (e.g., physical button press, API call)
+# Also runs periodically to catch any missed updates
 # ============================================================================
 - id: matrix_sync_routing_to_selects
   alias: "HDMI Matrix - Sync Routing to Input Selects"
@@ -84,9 +106,12 @@
     - platform: state
       entity_id: sensor.hdmi_matrix_routing
       attribute: outputs
+    # Also sync periodically in case changes were missed
+    - platform: time_pattern
+      minutes: "/5"
   condition:
     - condition: template
-      value_template: "{{ trigger.to_state.attributes.outputs is defined }}"
+      value_template: "{{ state_attr('sensor.hdmi_matrix_routing', 'outputs') is not none }}"
   action:
     - variables:
         outputs: "{{ state_attr('sensor.hdmi_matrix_routing', 'outputs') }}"
