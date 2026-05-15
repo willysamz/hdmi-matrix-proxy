@@ -9,6 +9,20 @@ data:
   MATRIX_TIMEOUT: {{ .Values.config.matrixTimeout | quote }}
   MATRIX_VERIFY_SSL: {{ .Values.config.matrixVerifySsl | quote }}
   MATRIX_HEALTH_INTERVAL: {{ .Values.config.matrixHealthInterval | quote }}
+  POLL_INTERVAL: {{ .Values.config.pollInterval | default "10.0" | quote }}
   SERVER_PORT: {{ .Values.service.port | quote }}
   LOG_LEVEL: {{ .Values.logging.level | quote }}
   LOG_JSON: {{ .Values.logging.json | quote }}
+  # --- MQTT (v0.2+) ---
+  MQTT_ENABLED: {{ .Values.mqtt.enabled | default "false" | quote }}
+  MQTT_HOST: {{ .Values.mqtt.host | default "mqtt" | quote }}
+  MQTT_PORT: {{ .Values.mqtt.port | default "1883" | quote }}
+  MQTT_CLIENT_ID: {{ .Values.mqtt.clientId | default "hdmi-matrix-proxy" | quote }}
+  MQTT_TOPIC_PREFIX: {{ .Values.mqtt.topicPrefix | default "matrix" | quote }}
+  MQTT_KEEPALIVE: {{ .Values.mqtt.keepalive | default "60" | quote }}
+  MQTT_QOS: {{ .Values.mqtt.qos | default "0" | quote }}
+  # --- HA discovery (v0.2+) ---
+  HA_DISCOVERY_ENABLED: {{ .Values.ha.discoveryEnabled | default "true" | quote }}
+  HA_DISCOVERY_PREFIX: {{ .Values.ha.discoveryPrefix | default "homeassistant" | quote }}
+  HA_DEVICE_NAME: {{ .Values.ha.deviceName | default "HDMI Matrix" | quote }}
+  HA_DEVICE_ID: {{ .Values.ha.deviceId | default "hdmi_matrix" | quote }}

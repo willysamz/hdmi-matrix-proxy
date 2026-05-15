@@ -41,6 +41,10 @@ spec:
           envFrom:
             - configMapRef:
                 name: {{ include "hdmi-matrix-proxy.fullname" . }}
+            {{- if .Values.mqtt.password }}
+            - secretRef:
+                name: {{ include "hdmi-matrix-proxy.fullname" . }}
+            {{- end }}
           {{- with .Values.extraEnv }}
           env:
             {{- toYaml . | nindent 12 }}

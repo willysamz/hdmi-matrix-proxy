@@ -1,13 +1,14 @@
 apiVersion: v2
 name: hdmi-matrix-proxy
-description: REST API proxy for MT-VIKI MT-H8M88 HDMI matrix HTTP control
+description: REST + MQTT proxy for MT-VIKI MT-H8M88 HDMI matrix HTTP control
 type: application
-version: 0.1.0
-appVersion: "0.1.0"
+version: 0.2.0
+appVersion: "0.2.0"
 keywords:
   - hdmi
   - matrix
   - video
   - home-assistant
+  - mqtt
 maintainers:
   - name: wsamuels

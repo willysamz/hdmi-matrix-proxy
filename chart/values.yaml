@@ -20,6 +20,36 @@ config:
   matrixTimeout: "5.0"
   matrixVerifySsl: "false"
   matrixHealthInterval: "30"
+  # Routing-state poll interval used by the MQTT publisher. Ignored
+  # when mqtt.enabled is false (then HA does its own REST polling).
+  pollInterval: "10.0"
+
+# --- MQTT broker (v0.2+) ---
+# Opt-in. When mqtt.enabled is "true" the proxy publishes routing state
+# and HA discovery payloads to the broker, and subscribes to per-output
+# + preset command topics. When "false" the proxy behaves like v0.1.x —
+# REST-only, HA polls the proxy directly.
+mqtt:
+  enabled: "false"
+  host: "mqtt"
+  port: "1883"
+  clientId: "hdmi-matrix-proxy"
+  topicPrefix: "matrix"
+  keepalive: "60"
+  qos: "0"
+  # If your broker requires authentication, populate username + password.
+  # The chart auto-creates a Secret with the password when set.
+  username: ""
+  password: ""
+
+# --- Home Assistant MQTT discovery (v0.2+) ---
+ha:
+  discoveryEnabled: "true"
+  discoveryPrefix: "homeassistant"
+  deviceName: "HDMI Matrix"
+  # Stable device id used in unique_id + the HA device card. Default
+  # keeps entity_ids predictable across reinstalls.
+  deviceId: "hdmi_matrix"
 
 # Logging configuration
 logging:
