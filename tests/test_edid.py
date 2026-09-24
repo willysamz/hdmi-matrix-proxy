@@ -599,9 +599,15 @@ def test_input_edid_select_discovery_payload():
     assert payload["unique_id"] == "hdmi_matrix_input_6_edid"
     assert payload["options"] == [SYS8]
     assert payload["command_topic"] == "matrix/edid/input/6/set"
-    # The assignment is unreadable, so the name must say so.
-    assert "not read back" in payload["name"].lower()
-    assert "PlayStation 5" in payload["name"]
+    # REVISED 2026-09-24. This used to require "not read back" IN THE NAME. It was
+    # there for a good reason — the assignment genuinely cannot be read from the
+    # device — but Home Assistant derives a new entity's entity_id from the device
+    # name plus this name, IGNORING object_id, so the warning became part of the id:
+    #   select.home_lab_hdmi_matrix_playstation_5_edid_set_not_read_back
+    # which is what every scene and automation would have to reference. The warning
+    # now lives in the docs and the app card; the name stays addressable.
+    assert payload["name"] == "PlayStation 5 EDID"
+    assert "not read back" not in payload["name"].lower()
 
 
 def test_input_resolution_sensor_discovery_payload():
