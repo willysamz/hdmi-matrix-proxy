@@ -152,7 +152,13 @@ def input_edid_select_payload(
     topic = f"{discovery_prefix}/select/{object_id}/config"
     base = (input_name or f"HDMI {input_number}").strip()
     payload: dict[str, Any] = {
-        "name": f"{base} EDID (set, not read back)",
+        # Just "<input> EDID". The warning that this value is SET, never read back
+        # from the device, belongs in the docs and the app card — NOT here. Home
+        # Assistant derives a new entity's entity_id from the device name plus this
+        # name, ignoring `object_id` below, so "(set, not read back)" produced
+        #   select.home_lab_hdmi_matrix_playstation_5_edid_set_not_read_back
+        # which is what every scene and automation would have had to reference.
+        "name": f"{base} EDID",
         "unique_id": object_id,
         "object_id": object_id,
         "state_topic": state_topic,
