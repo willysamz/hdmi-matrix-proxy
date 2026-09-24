@@ -1,46 +1,74 @@
-"""The EDID catalogue: what this matrix can hand an input, discovered at startup.
+"""The EDID catalogue: what this matrix can hand an input.
 
-The matrix carries two families of stored EDIDs (`sys` built-ins and `user`
-slots) plus the ability to copy the EDID read from any output. Their count is
-per-unit, so we **probe** rather than hardcode: read slot 1, 2, 3 … and stop at
-the first one the device answers `ERROR` to. On the unit in this house that
-lands on SYS 1-10 and USER 1-5, but those are this unit's numbers.
+Built by the poller on a cycle that actually reached the device — never at
+startup. Nothing on the matrix path may fail a boot, and a catalogue cached
+from a failed probe would publish an empty dropdown until somebody restarted
+the pod by hand.
 
-Two things make the labels load-bearing:
+## Why the option strings are ours, not the device's
 
-- **A name is not an identifier.** SYS 1-6 are all named `HDMI Matrix` and yet
-  hold different content, so a label of "HDMI Matrix" would be ambiguous and a
-  user picking it would get an arbitrary one. Every label carries its index.
-- **USER 3-5 hash-match SYS 3-5** on this unit, so the two families overlap.
-  The content hash is kept so a human can tell which entries are duplicates.
+`edid_name` comes back from the device, and it is a bad identifier four ways:
 
-Outputs are offered as `Copy from output N` with no name, because `out_edid`
-returns `ERROR` on this unit and there is nothing to read.
+- SYS 1-6 are all `'HDMI Matrix  '` — **with trailing spaces** — despite
+  holding different content.
+- SYS 9 and SYS 10 are both `UHD8K60`.
+- USER 1 and USER 2 are byte-identical.
+- It is parsed out of the EDID *content*, so writing a user slot with
+  `@EDID-SET-USER` changes it. Options that churn between restarts break any
+  automation holding the old string, with "Option is not valid".
+
+So the option strings are constants here. The firmware's own `card.js`
+`init_view()` hardcodes good names, index-aligned to SYS 1…10, and those are
+what `_SYS_NAMES` below reproduces. User slots get plain `USER 1`…`USER 5`.
+The device read then degrades to *validation* — it decides whether a slot
+exists, and can no longer destabilise the entity.
+
+Every label carries its index regardless, because a name alone is ambiguous on
+this unit.
+
+## What is deliberately not offered
+
+`@EDID-SW-OUT` ("copy the EDID from output N") stays in the client API and out
+of the entity. Copying from a sink means copying whatever that TV advertises —
+from the Theater TV that would plausibly reintroduce the HDR/Dolby-Vision
+metadata that is the whole reason this feature exists.
 """
 
 from __future__ import annotations
 
-import hashlib
 from dataclasses import dataclass
 from typing import Protocol
 
 import structlog
 
-from app.matrix_client import EDID_INDEX_MAX, EDID_PROBE_LIMIT
 from app.models import EdidSource
 
 log = structlog.get_logger()
 
-# Published as the select's state until this proxy has set the input's EDID.
-# HA's MQTT select maps the literal "None" to an unknown current_option, which
-# is the only honest starting value: the assignment cannot be read back.
-EDID_UNKNOWN_PAYLOAD = "None"
+# Built-in slot names, index-aligned to SYS 1…10, taken from `init_view()` in
+# the unit's own card.js rather than from `edid_name`.
+_SYS_NAMES: tuple[str, ...] = (
+    "HD8Stereo",
+    "HD8DolbyDTS",
+    "HD8Lossless",
+    "HD12Stereo3D",
+    "HD12DolbyDTS3D",
+    "HD12Lossless3D",
+    "UHD4K30",
+    "UHD4K60",
+    "UHD8K60",
+    "UHD8K60_420",
+)
 
-# The number of outputs whose EDID can be copied onto an input.
-EDID_OUTPUT_COUNT = 8
-
-# Families probed at startup, in the order they appear in the dropdown.
-_PROBED_FAMILIES: tuple[EdidSource, ...] = ("sys", "user")
+# Bounded probe ranges. Fixed, not "walk until ERROR": a timeout is not an
+# ERROR, and one dropped packet at slot 8 would silently drop
+# `SYS 8 · UHD4K60`, the exact EDID this feature exists to select. Measured
+# on this unit: sys 1-10 read, 11+ ERROR; user 1-5 read, 6 ERROR. The ranges
+# are wider than that so a gap or an extra slot is still seen, but the probe
+# skips anything above the write-side ceiling in `matrix_client.EDID_INDEX_MAX`
+# — a slot we could read but not write must never become an option.
+SYS_PROBE_RANGE = range(1, 17)
+USER_PROBE_RANGE = range(1, 9)
 
 _FAMILY_LABEL: dict[str, str] = {"sys": "SYS", "user": "USER"}
 
@@ -54,28 +82,30 @@ class _EdidReader(Protocol):  # pragma: no cover - typing only
 class EdidOption:
     """One selectable EDID.
 
-    `name` and `content_hash` are None for `out` options — `out_edid` cannot
-    be read on this unit, so there is nothing to name or hash.
+    `device_name` is what the device reported, kept for diagnostics only. It
+    is never part of `label`.
     """
 
     source: EdidSource
     index: int
-    name: str | None = None
-    content_hash: str | None = None
+    device_name: str | None = None
 
     @property
     def label(self) -> str:
-        """The human-readable dropdown label. Always carries the index."""
-        if self.source == "out":
-            return f"Copy from output {self.index}"
+        """The dropdown option. A code-owned constant, stable across restarts."""
         family = _FAMILY_LABEL.get(self.source, self.source.upper())
-        name = (self.name or "").strip() or "unnamed"
-        return f"{family} {self.index} · {name}"
+        if self.source == "sys" and 1 <= self.index <= len(_SYS_NAMES):
+            return f"{family} {self.index} · {_SYS_NAMES[self.index - 1]}"
+        return f"{family} {self.index}"
 
 
 class EdidCatalogue:
-    """Probed once, then cached. The device's slot contents do not change at
-    runtime unless somebody writes a USER slot, which is a front-panel act."""
+    """Holds the probed options. Filled by the poller; read by the controller
+    and the REST router.
+
+    `loaded` stays False until a probe completed, so the poller retries on the
+    next cycle rather than caching an empty catalogue forever.
+    """
 
     def __init__(self) -> None:
         self._options: list[EdidOption] = []
@@ -84,11 +114,6 @@ class EdidCatalogue:
 
     @property
     def loaded(self) -> bool:
-        """True once a probe has found at least one readable slot.
-
-        Stays False when the matrix was unreachable, so the next poll cycle
-        retries rather than publishing an empty dropdown forever.
-        """
         return self._loaded
 
     @property
@@ -100,66 +125,76 @@ class EdidCatalogue:
         return [o.label for o in self._options]
 
     def resolve(self, label: str) -> EdidOption | None:
-        """Map a dropdown label back to the option it names."""
+        """Map a dropdown option back to the slot it names."""
         return self._by_label.get(label.strip())
 
-    async def ensure_loaded(self, matrix: _EdidReader) -> None:
-        """Probe the device once; a no-op on every call after a successful one."""
-        if self._loaded:
-            return
-        options = await probe_catalogue(matrix)
-        if not options:
-            log.warning("edid_catalogue_probe_empty")
-            return
-        self._options = options
+    def load(self, options: list[EdidOption]) -> None:
+        self._options = list(options)
         self._by_label = {o.label: o for o in options}
         self._loaded = True
-        log.info(
-            "edid_catalogue_loaded",
-            count=len(options),
-            labels=[o.label for o in options],
-        )
+        log.info("edid_catalogue_loaded", count=len(options), labels=self.labels)
+
+    async def build(self, matrix: _EdidReader) -> bool:
+        """Probe the device and fill the catalogue. Returns True on success.
+
+        Abandons the whole build on a transport failure (after one retry)
+        rather than keeping a partial catalogue — a truncated dropdown is
+        worse than none, because it looks complete.
+        """
+        if self._loaded:
+            return True
+        try:
+            options = await probe_catalogue(matrix)
+        except RuntimeError as exc:
+            log.warning("edid_catalogue_probe_failed", error=str(exc))
+            return False
+        if not options:
+            log.warning("edid_catalogue_probe_empty")
+            return False
+        self.load(options)
+        return True
+
+
+async def _read_with_one_retry(matrix: _EdidReader, source: EdidSource, index: int) -> dict | None:
+    """Read a slot, retrying once on a transport failure.
+
+    Propagates `RuntimeError` when the retry fails too, so the caller can
+    abandon the build instead of mistaking a dropped packet for an absent slot.
+    """
+    try:
+        return await matrix.read_edid(source, index)
+    except RuntimeError as first:
+        log.debug("edid_read_retry", source=source, index=index, error=str(first))
+        return await matrix.read_edid(source, index)
 
 
 async def probe_catalogue(matrix: _EdidReader) -> list[EdidOption]:
-    """Read each family from slot 1 upward, stopping at the first `ERROR`.
+    """Validate each slot in a bounded range; absent slots are skipped.
 
-    Returns [] when nothing at all was readable — which is how an unreachable
-    matrix looks, and the caller should retry rather than cache that.
+    Does **not** stop at the first absent slot. Only the literal body `ERROR`
+    means absent (`MatrixClient.read_edid` raises for everything else), so a
+    gap in the middle is a real gap and a transport failure aborts the build.
+
+    Raises:
+        RuntimeError: If a slot could not be read even after one retry.
     """
+    from app.matrix_client import EDID_INDEX_MAX  # local: avoid an import cycle
+
     options: list[EdidOption] = []
-    for source in _PROBED_FAMILIES:
-        for index in range(1, EDID_PROBE_LIMIT + 1):
-            entry = await matrix.read_edid(source, index)
-            if entry is None:
-                # First ERROR in this family: that is the ceiling on this unit.
-                break
+    for source, probe_range in (("sys", SYS_PROBE_RANGE), ("user", USER_PROBE_RANGE)):
+        for index in probe_range:
             if index > EDID_INDEX_MAX[source]:
-                # Readable but not writable: `MatrixClient.set_input_edid`
-                # would reject it, so never offer it as an option. If this
-                # ever fires, a unit has more slots than the write-side
-                # ceiling in matrix_client.py knows about — raise that.
-                log.warning(
-                    "edid_slot_readable_but_above_write_ceiling",
-                    source=source,
-                    index=index,
-                    write_ceiling=EDID_INDEX_MAX[source],
-                )
-                break
-            hex_blob = entry.get("hex") or ""
+                # Readable but not writable — `set_input_edid` would reject it,
+                # so it must never become an option.
+                continue
+            entry = await _read_with_one_retry(matrix, source, index)  # type: ignore[arg-type]
+            if entry is None:
+                continue
             options.append(
                 EdidOption(
-                    source=source,
+                    source=source,  # type: ignore[arg-type]
                     index=index,
-                    name=entry.get("name"),
-                    content_hash=hashlib.sha256(str(hex_blob).encode()).hexdigest()[:12],
+                    device_name=(entry.get("name") or "").strip() or None,
                 )
             )
-
-    if not options:
-        return []
-
-    # Outputs are appended unconditionally: the copy-from-output command works
-    # even though reading an output's EDID does not.
-    options.extend(EdidOption(source="out", index=n) for n in range(1, EDID_OUTPUT_COUNT + 1))
     return options

@@ -124,25 +124,35 @@ def input_edid_select_payload(
 ) -> tuple[str, dict[str, Any]]:
     """Discovery topic + payload for a per-input EDID `select`.
 
-    **This entity is write-through, not read-back.** The matrix exposes no way
-    to query which EDID an input is currently using — `out_edid` answers
-    `ERROR` and nothing else reports the assignment. So the select publishes
-    `None` (unknown) until this proxy sets it, then echoes the value it set,
-    and never claims to have read anything from the device. A change made from
-    the matrix's own web UI or front panel will not appear here.
-
-    The entity's name says so, because the dashboard is where someone will
+    **This entity shows what was set, not what the device reports.** The
+    matrix exposes no way to query which EDID an input is using — `out_edid`
+    answers `ERROR` and nothing else reports the assignment — so the select
+    echoes the value this proxy last set and never claims to have read it. A
+    change made from the matrix's own web UI or front panel will not appear
+    here. The name says so, because a dashboard is where someone would
     otherwise assume it is authoritative.
 
-    There is deliberately **no all-inputs entity**: `MatrixClient.set_input_edid`
-    takes `input_num=None` for the human who wants it, but a misclick in HA
-    would retune every source in the house.
+    State is published **retained**, and nothing is published at boot: the
+    broker replays the last value, which needs no storage and matches what the
+    poller already does for routing. The companion
+    `sensor.<device>_input_N_resolution` is the read-back that makes a desync
+    visible.
+
+    `options` are code-owned constants (see `app/edid.py`), never the device's
+    `edid_name`, so they stay stable across restarts and user-slot writes.
+    `@EDID-SW-OUT` "copy from output N" is deliberately absent: it copies
+    whatever the attached TV advertises, which is how the HDR/Dolby-Vision
+    metadata at the root of this problem would come back.
+
+    There is also deliberately **no all-inputs entity**:
+    `MatrixClient.set_input_edid` takes `input_num=None` for the human who
+    wants it, but a misclick in HA would retune every source in the house.
     """
     object_id = f"{device_id}_input_{input_number}_edid"
     topic = f"{discovery_prefix}/select/{object_id}/config"
     base = (input_name or f"HDMI {input_number}").strip()
     payload: dict[str, Any] = {
-        "name": f"{base} EDID (not read back)",
+        "name": f"{base} EDID (set, not read back)",
         "unique_id": object_id,
         "object_id": object_id,
         "state_topic": state_topic,
@@ -153,6 +163,42 @@ def input_edid_select_payload(
         "payload_not_available": "offline",
         "icon": "mdi:monitor-eye",
         "entity_category": "config",
+        "device": device_block(device_id, device_name),
+    }
+    return topic, payload
+
+
+def input_resolution_sensor_payload(
+    *,
+    discovery_prefix: str,
+    device_id: str,
+    device_name: str,
+    state_topic: str,
+    availability_topic: str,
+    input_number: int,
+    input_name: str | None,
+) -> tuple[str, dict[str, Any]]:
+    """Discovery topic + payload for a per-input resolution `sensor`.
+
+    Read from `in_info=<n-1>`'s `InputResolution`, this is genuine read-back:
+    not which EDID the input carries, but the resolution the source settled on
+    after reading it — the measured *effect*. It is what the 2026-09-24
+    diagnosis actually watched, and it is the signal that the EDID select has
+    gone stale after somebody changed an EDID from the device's own web UI.
+    """
+    object_id = f"{device_id}_input_{input_number}_resolution"
+    topic = f"{discovery_prefix}/sensor/{object_id}/config"
+    base = (input_name or f"HDMI {input_number}").strip()
+    payload: dict[str, Any] = {
+        "name": f"{base} Resolution",
+        "unique_id": object_id,
+        "object_id": object_id,
+        "state_topic": state_topic,
+        "availability_topic": availability_topic,
+        "payload_available": "online",
+        "payload_not_available": "offline",
+        "icon": "mdi:television-play",
+        "entity_category": "diagnostic",
         "device": device_block(device_id, device_name),
     }
     return topic, payload

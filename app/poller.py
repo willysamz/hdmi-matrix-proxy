@@ -15,9 +15,10 @@ import structlog
 from app.discovery import (
     health_binary_sensor_payload,
     input_edid_select_payload,
+    input_resolution_sensor_payload,
     output_select_payload,
 )
-from app.edid import EDID_UNKNOWN_PAYLOAD, EdidCatalogue
+from app.edid import EdidCatalogue
 
 if TYPE_CHECKING:
     from app.config import Settings
@@ -51,10 +52,7 @@ class Poller:
         self._published_input_names: dict[int, str] | None = None
         self._published_output_names: dict[int, str] | None = None
         self._published_routing: dict[int, int] | None = None
-        # Per-input EDID has no read-back, so there is no "published state"
-        # to diff. We publish `unknown` once, when discovery goes out, and
-        # after that only the Controller publishes — the value it just set.
-        self._edid_unknown_published = False
+        self._published_resolutions: dict[int, str] = {}
 
     def trigger_immediate_poll(self) -> None:
         """Signal the run loop to skip the sleep and poll right now.
@@ -118,13 +116,23 @@ class Poller:
 
         # Discovery: publish on first successful cycle, then re-publish if
         # input/output names change (HA picks up renames on the fly).
+        # The EDID catalogue is built HERE, on a cycle that reached the
+        # device — never at startup. Every matrix call on the boot path
+        # swallows its errors and falls back, and a probe in front of the
+        # readiness probe costs ~260 ms per slot. An unreachable matrix would
+        # either crash-loop the pod or freeze an empty dropdown in place.
+        # `build()` is a no-op once loaded and retries on the next cycle
+        # otherwise.
+        catalogue_changed = not self.edid_catalogue.loaded
+        if catalogue_changed:
+            catalogue_changed = await self.edid_catalogue.build(self.matrix)
+
         names_changed = (
             self._published_input_names != input_names
             or self._published_output_names != output_names
         )
-        if not self._discovery_published or names_changed:
+        if not self._discovery_published or names_changed or catalogue_changed:
             await self._publish_discovery(input_names, output_names)
-            await self._publish_edid_unknown()
             self._published_input_names = dict(input_names)
             self._published_output_names = dict(output_names)
             self._discovery_published = True
@@ -149,27 +157,29 @@ class Poller:
                 )
         self._published_routing = dict(routing)
 
-    async def _publish_edid_unknown(self) -> None:
-        """Seed every per-input EDID select as `unknown`.
+        await self._publish_input_resolutions(prefix)
 
-        Done once, right after discovery. The matrix cannot report which EDID
-        an input is using, so `unknown` is the only honest value until this
-        proxy sets one — and because the state is published unretained, a
-        proxy or HA restart correctly falls back to unknown rather than
-        resurrecting a value a front-panel change may have invalidated.
+    async def _publish_input_resolutions(self, prefix: str) -> None:
+        """Publish each input's live resolution, on delta.
+
+        This is the only genuine read-back in the EDID story: the resolution a
+        source settled on after reading the EDID we gave it. It costs eight
+        extra POSTs per cycle, which is the main reason to keep `poll_interval`
+        where it is.
         """
-        if not self.settings.ha_discovery_enabled or not self.edid_catalogue.loaded:
+        if not self.settings.ha_discovery_enabled:
             return
-        if self._edid_unknown_published:
-            return
-        prefix = self.settings.mqtt_topic_prefix.strip("/")
         for input_n in range(1, 9):
+            info = await self.matrix.get_input_info(input_n)
+            resolution = (info or {}).get("resolution") or "unknown"
+            if self._published_resolutions.get(input_n) == resolution:
+                continue
             await self.mqtt.publish(
-                f"{prefix}/edid/input/{input_n}/state",
-                EDID_UNKNOWN_PAYLOAD,
-                retain=False,
+                f"{prefix}/edid/input/{input_n}/resolution",
+                resolution,
+                retain=True,
             )
-        self._edid_unknown_published = True
+            self._published_resolutions[input_n] = resolution
 
     async def _publish_health(self, reachable: bool) -> None:
         if not self.settings.ha_discovery_enabled:
@@ -214,11 +224,9 @@ class Poller:
             )
             await self.mqtt.publish(topic, payload, retain=True)
 
-        # Per-input EDID selects. The catalogue is probed from the device
-        # once, on the first cycle that reaches it; if that failed we simply
-        # skip the entities this round and try again next cycle rather than
-        # publish an empty dropdown.
-        await self.edid_catalogue.ensure_loaded(self.matrix)
+        # Per-input EDID selects. Only once the catalogue is built — an
+        # empty dropdown is worse than a missing entity, because HA would
+        # keep it and reject every option.
         if self.edid_catalogue.loaded:
             edid_options = self.edid_catalogue.labels
             for input_n in range(1, 9):
@@ -234,6 +242,19 @@ class Poller:
                     options=edid_options,
                 )
                 await self.mqtt.publish(topic, payload, retain=True)
+
+        # Per-input resolution sensors — the read-back beside the select.
+        for input_n in range(1, 9):
+            topic, payload = input_resolution_sensor_payload(
+                discovery_prefix=self.settings.ha_discovery_prefix,
+                device_id=device_id,
+                device_name=device_name,
+                state_topic=f"{prefix}/edid/input/{input_n}/resolution",
+                availability_topic=availability_topic,
+                input_number=input_n,
+                input_name=input_names.get(input_n),
+            )
+            await self.mqtt.publish(topic, payload, retain=True)
 
         # Health binary_sensor.
         topic, payload = health_binary_sensor_payload(

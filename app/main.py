@@ -12,12 +12,11 @@ from fastapi import FastAPI
 from app import __version__
 from app.config import settings
 from app.controller import Controller, ControllerError
-from app.dependencies import set_matrix_client, set_startup_time
-from app.edid import EdidCatalogue
+from app.dependencies import get_edid_catalogue, set_matrix_client, set_startup_time
 from app.matrix_client import MatrixClient
 from app.mqtt_client import MqttClient
 from app.poller import Poller
-from app.routers import health, routing, system
+from app.routers import edid, health, routing, system
 
 # Configure structured logging
 LOG_LEVELS = {"DEBUG": 10, "INFO": 20, "WARNING": 30, "ERROR": 40, "CRITICAL": 50}
@@ -85,11 +84,11 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
             qos=settings.mqtt_qos,
             availability_topic=f"{settings.mqtt_topic_prefix.strip('/')}/bridge/available",
         )
-        # One catalogue shared by the poller (which publishes it as the
-        # select options) and the controller (which resolves labels back to
-        # a source+index). Probed lazily on the first poll cycle that
-        # reaches the matrix.
-        edid_catalogue = EdidCatalogue()
+        # One catalogue shared by the poller (which builds it and publishes
+        # it as the select options), the controller (which resolves labels
+        # back to a source+index) and the REST router. It is built on a poll
+        # cycle that reached the matrix, never on the boot path.
+        edid_catalogue = get_edid_catalogue()
         poller = Poller(
             matrix=matrix_client,
             mqtt=mqtt,
@@ -205,6 +204,7 @@ app = FastAPI(
 app.include_router(health.router, tags=["Health"])
 app.include_router(system.router, prefix="/api", tags=["System"])
 app.include_router(routing.router, prefix="/api", tags=["Routing"])
+app.include_router(edid.router, prefix="/api", tags=["EDID"])
 
 
 @app.get("/")

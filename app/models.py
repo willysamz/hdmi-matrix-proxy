@@ -145,3 +145,67 @@ class OutputListResponse(BaseModel):
 
     outputs: list[OutputInfo]
     names: list[str] = Field(description="Just the names (for dropdown options)")
+
+
+# EDID Models
+class SetInputEdidRequest(BaseModel):
+    """Assign an EDID to one input.
+
+    Identified by source + index rather than by the option label, so the
+    REST path does not depend on the MQTT poller having built the catalogue.
+
+    `input` is required and 1-8. It is deliberately **not** nullable: the
+    device treats 0 as "all inputs", and a `{"input": null}` body silently
+    retuning every source in the house is not an acceptable accident. The
+    all-inputs form stays in the client API only.
+    """
+
+    source: Literal["out", "sys", "user"] = Field(
+        description="EDID family: 'sys' (built-in), 'user' (user slot), "
+        "'out' (copy the EDID read from an output)"
+    )
+    index: int = Field(ge=1, description="Slot number: sys 1-10, user 1-5, out 1-8")
+    input: int = Field(ge=1, le=8, description="Input number (1-8)")
+    rehandshake: bool = Field(
+        True,
+        description="Reset the input port afterwards so the source re-reads "
+        "the EDID. UNVERIFIED mechanism — see MatrixClient.reset_input_port.",
+    )
+
+
+class SetInputEdidResponse(BaseModel):
+    """Response after assigning an EDID to an input."""
+
+    input: int
+    input_name: str | None = None
+    source: str
+    index: int
+    label: str | None = Field(
+        None, description="Catalogue label, when the catalogue has been built"
+    )
+    rehandshake: bool
+    success: bool
+    message: str | None = None
+
+
+class EdidOptionInfo(BaseModel):
+    """One catalogue entry."""
+
+    source: str
+    index: int
+    label: str = Field(description="Code-owned option string, stable across restarts")
+    device_name: str | None = Field(
+        None, description="What the device reported; diagnostics only, never an identifier"
+    )
+
+
+class EdidCatalogueResponse(BaseModel):
+    """The EDID catalogue.
+
+    Note there is no current-assignment field: the matrix has no endpoint that
+    reports which EDID an input is using, so nothing here is read back.
+    """
+
+    loaded: bool
+    options: list[EdidOptionInfo]
+    labels: list[str] = Field(description="Just the labels (for dropdown options)")

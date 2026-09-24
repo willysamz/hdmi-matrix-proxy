@@ -26,6 +26,15 @@ class Settings(BaseSettings):
     # this replaces HA's per-sensor REST polling.
     poll_interval: float = 10.0  # seconds between routing-state polls
 
+    # --- EDID ---
+    # After assigning an EDID to an input the proxy resets that input port
+    # (`@PORT-RESET:0,NN`) so the source re-reads it. A source only re-reads
+    # EDID on a hotplug, so something has to provoke one — but it is NOT
+    # verified that this is required, nor that a port reset is the right
+    # provocation. See `MatrixClient.reset_input_port`. This is the single
+    # place to turn it off once somebody measures it.
+    matrix_edid_rehandshake: bool = True
+
     # --- MQTT broker (v0.2+) ---
     # If `mqtt_enabled` is False the MQTT path is fully off and the
     # service behaves like v0.1.x (REST-only). When True, the poller

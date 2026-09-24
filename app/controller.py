@@ -52,6 +52,10 @@ class Controller:
         self.poller = poller
         self.settings = settings
         self.edid_catalogue = edid_catalogue or EdidCatalogue()
+        # What this proxy last set on each input. Used only to make a
+        # redundant set cheap — see `set_input_edid`. Never a claim about
+        # what the device is actually using.
+        self._last_edid_set: dict[int, str] = {}
 
     async def set_output_input(self, output_number: int, payload: str) -> None:
         """Handle a per-output `set` command.
@@ -76,31 +80,49 @@ class Controller:
     async def set_input_edid(self, input_number: int, payload: str) -> None:
         """Handle a per-input EDID `set` command.
 
-        `payload` is a catalogue label as published in the select's
-        `options[]` (`SYS 8 · UHD4K60`, `USER 1 · Beyond TV`,
-        `Copy from output 3`). We resolve it against the catalogue rather
-        than parsing it, so an option we never offered is rejected instead
-        of being turned into a command the device would answer `OK` to and
-        then ignore.
+        `payload` is one of the select's `options[]` (`SYS 8 · UHD4K60`,
+        `USER 1`). We resolve it against the catalogue rather than parsing it,
+        so an option we never offered is rejected instead of becoming a
+        command the device would answer and then ignore.
 
-        After the write we publish the label we just set. We do **not**
-        `trigger_immediate_poll` — the poller reads routing state, and the
-        matrix has no endpoint that reports an input's EDID assignment, so
-        there is nothing to poll for. What we publish is what we set, and it
-        is wrong the moment somebody changes it at the front panel.
+        Input 0 is rejected: the command topic's numeric segment can match it,
+        and 0 is the device's all-inputs sentinel — which must never be
+        reachable from an entity.
+
+        State is published **only when the device confirmed the write**, and
+        only what we set — the matrix has no endpoint reporting an input's
+        EDID assignment, so there is nothing to poll for and
+        `trigger_immediate_poll` is deliberately not called.
         """
         if not 1 <= input_number <= 8:
-            # Input 0 is the device's "all inputs" form. It is intentionally
-            # not reachable from an entity — a misclick would retune every
-            # source in the house.
             raise ControllerError(f"invalid input number: {input_number}")
 
-        await self.edid_catalogue.ensure_loaded(self.matrix)
+        if not self.edid_catalogue.loaded:
+            raise ControllerError(
+                "EDID catalogue not built yet; the poller builds it on a cycle "
+                "that reaches the matrix"
+            )
         option = self.edid_catalogue.resolve(payload)
         if option is None:
             raise ControllerError(
-                f"unknown EDID option {payload!r}; " f"known: {self.edid_catalogue.labels}"
+                f"unknown EDID option {payload!r}; known: {self.edid_catalogue.labels}"
             )
+
+        prefix = self.settings.mqtt_topic_prefix.strip("/")
+
+        if self._last_edid_set.get(input_number) == option.label:
+            # Scenes set the EDID explicitly *and* an HA automation watches
+            # the selects, so this handler is called redundantly on purpose,
+            # to minimise blank-screen time. Re-sending would be harmless but
+            # the re-handshake after it is not: resetting the input port drops
+            # video for a moment, so a redundant call would cause the very
+            # blink the belt-and-braces approach exists to avoid. Skip both
+            # and re-publish the state we already claim.
+            log.debug("mqtt_edid_already_set", input=input_number, label=option.label)
+            await self.mqtt.publish(
+                f"{prefix}/edid/input/{input_number}/state", option.label, retain=True
+            )
+            return
 
         log.info(
             "mqtt_edid_set",
@@ -108,16 +130,27 @@ class Controller:
             source=option.source,
             index=option.index,
             label=option.label,
+            rehandshake=self.settings.matrix_edid_rehandshake,
         )
-        await self.matrix.set_input_edid(option.source, option.index, input_number)
+        ok = await self.matrix.set_input_edid(
+            option.source,
+            option.index,
+            input_number,
+            rehandshake=self.settings.matrix_edid_rehandshake,
+        )
+        if not ok:
+            # The device refused it. Publishing anyway would put an
+            # authoritative-looking value in HA for a command that did not
+            # take — exactly the failure the multiviewer's HDCP select showed
+            # when it accepted `Off` and kept its old value.
+            raise ControllerError(f"matrix refused EDID {option.label!r} for input {input_number}")
 
-        prefix = self.settings.mqtt_topic_prefix.strip("/")
-        # Not retained: on a restart the select must go back to unknown
-        # rather than replay a value the device may no longer be using.
+        self._last_edid_set[input_number] = option.label
+        # Retained: nothing is published at boot, so the broker replays this.
         await self.mqtt.publish(
             f"{prefix}/edid/input/{input_number}/state",
             option.label,
-            retain=False,
+            retain=True,
         )
 
     async def set_preset(self, json_payload: str) -> None:
