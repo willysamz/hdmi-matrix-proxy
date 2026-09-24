@@ -119,7 +119,7 @@ The MT-VIKI MT-H8M88 uses the following command format:
 ## Documentation
 
 - [Home Assistant Integration](docs/home-assistant.md)
-- [Per-input EDID](docs/edid.md) — the `@EDID-SW-*` commands, the probed catalogue, and why the EDID selects are write-through rather than read-back
+- [Per-input EDID](docs/edid.md) — the `@EDID-SW-*` commands, the probed catalogue, and why the EDID select shows what was set rather than what the device reports
 - [OpenAPI Specification](docs/openapi.json) (generate with `make openapi`)
 
 ## Architecture
