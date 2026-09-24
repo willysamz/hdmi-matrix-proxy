@@ -7,16 +7,16 @@ from pathlib import Path
 
 def bump_version(version: str, part: str) -> str:
     """Bump version number.
-    
+
     Args:
         version: Current version (e.g., "0.1.0")
         part: Part to bump ("major", "minor", or "patch")
-    
+
     Returns:
         New version string
     """
     major, minor, patch = map(int, version.split("."))
-    
+
     if part == "major":
         major += 1
         minor = 0
@@ -28,7 +28,7 @@ def bump_version(version: str, part: str) -> str:
         patch += 1
     else:
         raise ValueError(f"Invalid part: {part}. Must be 'major', 'minor', or 'patch'")
-    
+
     return f"{major}.{minor}.{patch}"
 
 
@@ -37,17 +37,17 @@ def main():
     if len(sys.argv) != 2 or sys.argv[1] not in ["major", "minor", "patch"]:
         print("Usage: bump_version.py [major|minor|patch]")
         sys.exit(1)
-    
+
     part = sys.argv[1]
     root_dir = Path(__file__).parent.parent
-    
+
     # Read current version
     version_file = root_dir / "VERSION"
     current_version = version_file.read_text().strip()
-    
+
     # Bump version
     new_version = bump_version(current_version, part)
-    
+
     # VALIDATE EVERY FILE BEFORE WRITING ANY OF THEM.
     #
     # Two bugs found 2026-09-24, both of which had already happened:
