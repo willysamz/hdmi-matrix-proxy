@@ -12,11 +12,11 @@ from fastapi import FastAPI
 from app import __version__
 from app.config import settings
 from app.controller import Controller, ControllerError
-from app.dependencies import set_matrix_client, set_startup_time
+from app.dependencies import get_edid_catalogue, set_matrix_client, set_startup_time
 from app.matrix_client import MatrixClient
 from app.mqtt_client import MqttClient
 from app.poller import Poller
-from app.routers import health, routing, system
+from app.routers import edid, health, routing, system
 
 # Configure structured logging
 LOG_LEVELS = {"DEBUG": 10, "INFO": 20, "WARNING": 30, "ERROR": 40, "CRITICAL": 50}
@@ -84,9 +84,23 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
             qos=settings.mqtt_qos,
             availability_topic=f"{settings.mqtt_topic_prefix.strip('/')}/bridge/available",
         )
-        poller = Poller(matrix=matrix_client, mqtt=mqtt, settings=settings)
+        # One catalogue shared by the poller (which builds it and publishes
+        # it as the select options), the controller (which resolves labels
+        # back to a source+index) and the REST router. It is built on a poll
+        # cycle that reached the matrix, never on the boot path.
+        edid_catalogue = get_edid_catalogue()
+        poller = Poller(
+            matrix=matrix_client,
+            mqtt=mqtt,
+            settings=settings,
+            edid_catalogue=edid_catalogue,
+        )
         controller = Controller(
-            matrix=matrix_client, mqtt=mqtt, poller=poller, settings=settings
+            matrix=matrix_client,
+            mqtt=mqtt,
+            poller=poller,
+            settings=settings,
+            edid_catalogue=edid_catalogue,
         )
 
         mqtt_ctx = mqtt.session()
@@ -111,18 +125,22 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
 _OUTPUT_SET_RE = re.compile(r"^[^/]+/routing/output/(?P<n>\d+)/set$")
 _PRESET_SET_RE = re.compile(r"^[^/]+/routing/preset/set$")
+_EDID_SET_RE = re.compile(r"^[^/]+/edid/input/(?P<n>\d+)/set$")
 
 
-async def _command_subscriber(
-    mqtt: MqttClient, controller: Controller, topic_prefix: str
-) -> None:
+async def _command_subscriber(mqtt: MqttClient, controller: Controller, topic_prefix: str) -> None:
     """Subscribe to per-output + preset command topics and route them."""
     prefix = topic_prefix.strip("/")
     output_filter = f"{prefix}/routing/output/+/set"
     preset_filter = f"{prefix}/routing/preset/set"
+    edid_filter = f"{prefix}/edid/input/+/set"
     await mqtt.subscribe(output_filter)
     await mqtt.subscribe(preset_filter)
-    log.info("command_subscriber_started", topics=[output_filter, preset_filter])
+    await mqtt.subscribe(edid_filter)
+    log.info(
+        "command_subscriber_started",
+        topics=[output_filter, preset_filter, edid_filter],
+    )
 
     async for msg in mqtt.messages:
         topic_str = str(msg.topic)
@@ -144,6 +162,17 @@ async def _command_subscriber(
                 log.warning("command_output_rejected", output=output_n, error=str(exc))
             except Exception as exc:
                 log.warning("command_output_failed", output=output_n, error=str(exc))
+            continue
+
+        m = _EDID_SET_RE.match(topic_str)
+        if m:
+            input_n = int(m.group("n"))
+            try:
+                await controller.set_input_edid(input_n, payload)
+            except ControllerError as exc:
+                log.warning("command_edid_rejected", input=input_n, error=str(exc))
+            except Exception as exc:
+                log.warning("command_edid_failed", input=input_n, error=str(exc))
             continue
 
         if _PRESET_SET_RE.match(topic_str):
@@ -173,6 +202,7 @@ app = FastAPI(
 app.include_router(health.router, tags=["Health"])
 app.include_router(system.router, prefix="/api", tags=["System"])
 app.include_router(routing.router, prefix="/api", tags=["Routing"])
+app.include_router(edid.router, prefix="/api", tags=["EDID"])
 
 
 @app.get("/")

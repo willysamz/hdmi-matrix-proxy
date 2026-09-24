@@ -190,3 +190,70 @@ The case to *defer* gets stronger if:
 - The matrix is stable and not changing.
 - You don't want to risk dashboard breakage right now.
 - Other projects compete for your attention.
+
+---
+
+## Phase 2 done log — 2026-05-15
+
+The HA-side cleanup landed in three commits in the home-assistant
+repo (local-only, no remote):
+
+1. **`a897a27` — dashboard entity-id swaps.** 67 swaps across the
+   4 hdmi-matrix lovelace dashboards (`_`, `_2`, `_3`, `_4`).
+   Mapping (canonical, fetched from the matrix proxy's /api/outputs):
+   - Output 1 → `select.hdmi_matrix_theater_tv_source`
+   - Output 2 → `select.hdmi_matrix_left_pool_table_tv_source`
+   - Output 3 → `select.hdmi_matrix_right_pool_table_tv_source`
+   - Output 4 → `select.hdmi_matrix_play_room_tv_source`
+   - Outputs 5–8 → `select.hdmi_matrix_mviewer_{1..4}_source`
+   Also `sensor.hdmi_matrix_health` / `_status` → `binary_sensor.hdmi_matrix_matrix_reachable`.
+
+2. **`233ce0a` — 10 matrix automations deleted from `automations.yaml`.**
+   The MQTT select entities have native command topics, so
+   `matrix_output_{1..8}_changed` (8 wrappers around per-output
+   rest_command calls) are obsolete. Same for the
+   `matrix_sync_input_names_on_startup` and
+   `matrix_sync_routing_to_selects` plumbing automations.
+   Net: -293 lines.
+
+3. **`75d6ea8` — legacy `configuration.yaml` blocks deleted.**
+   Removed the 5 matrix REST sensors, 8 `input_select.matrix_output_N_source`
+   entries, and 8 `sensor.matrix_output_N_current_source` template
+   sensors. Kept the 10 matrix `rest_command` entries because
+   `scripts.yaml` still uses `matrix_preset` for atomic bulk
+   routing and the proxy serves the REST endpoint as belt-and-
+   suspenders. Net: -265 lines (configuration.yaml: 683 → 418).
+
+### Total impact
+
+- **858 lines deleted** across 6 files (4 dashboards, automations.yaml, configuration.yaml).
+- **0 manual entity-id swaps** required in scripts.yaml (preset path stays on REST).
+- HA's dashboards now read off the MQTT-discovered selects whose
+  state is pushed by the proxy in ~1s, not polled every 10s.
+- Bulk preset routing (`matrix_preset` script) keeps its atomic
+  hardware operation via the proxy's REST endpoint.
+
+### Caveats observed
+
+- HA's MQTT integration is sticky-on-first-discovery for entity_id
+  derivation. The matrix proxy's discovery code pins `object_id`
+  (= `hdmi_matrix_output_N_source`) but HA had already created
+  entities using the friendly name on the initial v0.2.0 rollout.
+  End-state is fine (descriptive names like `theater_tv_source`),
+  just a different end-state than the original plan anticipated.
+
+- Renaming an output in the matrix UI (e.g. "Theater TV" →
+  "Living Room TV") changes the MQTT discovery payload but HA
+  keeps the existing entity_id. Dashboards keep working;
+  entity_id becomes mildly misleading. Workaround if it ever
+  matters: delete the entity in HA UI → next discovery republish
+  recreates with the new slug.
+
+### Phase 3 (optional, deferred)
+
+Mark the proxy's REST routing endpoints deprecated; remove in
+v0.3.0 after ~3 months of clean MQTT-only operation. Right now
+they're still needed because `scripts.yaml`'s preset path uses
+`rest_command.matrix_preset`. To finish Phase 3 the preset path
+needs to be migrated to `mqtt.publish` against
+`matrix/routing/preset/set`.

@@ -14,8 +14,11 @@ import structlog
 
 from app.discovery import (
     health_binary_sensor_payload,
+    input_edid_select_payload,
+    input_resolution_sensor_payload,
     output_select_payload,
 )
+from app.edid import EdidCatalogue
 
 if TYPE_CHECKING:
     from app.config import Settings
@@ -33,10 +36,12 @@ class Poller:
         matrix: MatrixClient,
         mqtt: MqttClient,
         settings: Settings,
+        edid_catalogue: EdidCatalogue | None = None,
     ) -> None:
         self.matrix = matrix
         self.mqtt = mqtt
         self.settings = settings
+        self.edid_catalogue = edid_catalogue or EdidCatalogue()
 
         self._task: asyncio.Task | None = None
         self._stop_event = asyncio.Event()
@@ -47,6 +52,8 @@ class Poller:
         self._published_input_names: dict[int, str] | None = None
         self._published_output_names: dict[int, str] | None = None
         self._published_routing: dict[int, int] | None = None
+        self._resolution_tick = 0
+        self._published_resolutions: dict[int, str] = {}
 
     def trigger_immediate_poll(self) -> None:
         """Signal the run loop to skip the sleep and poll right now.
@@ -110,11 +117,22 @@ class Poller:
 
         # Discovery: publish on first successful cycle, then re-publish if
         # input/output names change (HA picks up renames on the fly).
+        # The EDID catalogue is built HERE, on a cycle that reached the
+        # device — never at startup. Every matrix call on the boot path
+        # swallows its errors and falls back, and a probe in front of the
+        # readiness probe costs ~260 ms per slot. An unreachable matrix would
+        # either crash-loop the pod or freeze an empty dropdown in place.
+        # `build()` is a no-op once loaded and retries on the next cycle
+        # otherwise.
+        catalogue_changed = not self.edid_catalogue.loaded
+        if catalogue_changed:
+            catalogue_changed = await self.edid_catalogue.build(self.matrix)
+
         names_changed = (
             self._published_input_names != input_names
             or self._published_output_names != output_names
         )
-        if not self._discovery_published or names_changed:
+        if not self._discovery_published or names_changed or catalogue_changed:
             await self._publish_discovery(input_names, output_names)
             self._published_input_names = dict(input_names)
             self._published_output_names = dict(output_names)
@@ -139,6 +157,36 @@ class Poller:
                     retain=True,
                 )
         self._published_routing = dict(routing)
+
+        # Every OTHER cycle. Eight POSTs on top of the three this cycle already
+        # makes would be ~3.7x the device's traffic, and the constraint here is the
+        # MATRIX, not our HTTP client — the vendor's own UI throttles its polling
+        # around every write. Halving it keeps us near the UI's own ~1 Hz.
+        self._resolution_tick += 1
+        if self._resolution_tick % 2 == 0:
+            await self._publish_input_resolutions(prefix)
+
+    async def _publish_input_resolutions(self, prefix: str) -> None:
+        """Publish each input's live resolution, on delta.
+
+        This is the only genuine read-back in the EDID story: the resolution a
+        source settled on after reading the EDID we gave it. It costs eight
+        extra POSTs per cycle, which is the main reason to keep `poll_interval`
+        where it is.
+        """
+        if not self.settings.ha_discovery_enabled:
+            return
+        for input_n in range(1, 9):
+            info = await self.matrix.get_input_info(input_n)
+            resolution = (info or {}).get("resolution") or "unknown"
+            if self._published_resolutions.get(input_n) == resolution:
+                continue
+            await self.mqtt.publish(
+                f"{prefix}/edid/input/{input_n}/resolution",
+                resolution,
+                retain=True,
+            )
+            self._published_resolutions[input_n] = resolution
 
     async def _publish_health(self, reachable: bool) -> None:
         if not self.settings.ha_discovery_enabled:
@@ -180,6 +228,38 @@ class Poller:
                 output_number=output_n,
                 output_name=output_names.get(output_n),
                 input_names=options,
+            )
+            await self.mqtt.publish(topic, payload, retain=True)
+
+        # Per-input EDID selects. Only once the catalogue is built — an
+        # empty dropdown is worse than a missing entity, because HA would
+        # keep it and reject every option.
+        if self.edid_catalogue.loaded:
+            edid_options = self.edid_catalogue.labels
+            for input_n in range(1, 9):
+                topic, payload = input_edid_select_payload(
+                    discovery_prefix=self.settings.ha_discovery_prefix,
+                    device_id=device_id,
+                    device_name=device_name,
+                    state_topic=f"{prefix}/edid/input/{input_n}/state",
+                    command_topic=f"{prefix}/edid/input/{input_n}/set",
+                    availability_topic=availability_topic,
+                    input_number=input_n,
+                    input_name=input_names.get(input_n),
+                    options=edid_options,
+                )
+                await self.mqtt.publish(topic, payload, retain=True)
+
+        # Per-input resolution sensors — the read-back beside the select.
+        for input_n in range(1, 9):
+            topic, payload = input_resolution_sensor_payload(
+                discovery_prefix=self.settings.ha_discovery_prefix,
+                device_id=device_id,
+                device_name=device_name,
+                state_topic=f"{prefix}/edid/input/{input_n}/resolution",
+                availability_topic=availability_topic,
+                input_number=input_n,
+                input_name=input_names.get(input_n),
             )
             await self.mqtt.publish(topic, payload, retain=True)
 
