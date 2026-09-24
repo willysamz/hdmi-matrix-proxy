@@ -6,9 +6,32 @@ from datetime import UTC, datetime
 import httpx
 import structlog
 
-from app.models import ConnectionState
+from app.models import ConnectionState, EdidSource
 
 log = structlog.get_logger()
+
+# EDID command families and the write-side ceiling for each, as measured on
+# this MT-VIKI unit on 2026-09-24. These bound what we will *send*; the
+# catalogue probe in `app/edid.py` discovers the real ceiling by reading
+# until the device answers ERROR, because these numbers are this unit's.
+EDID_INDEX_MAX: dict[str, int] = {"out": 8, "sys": 10, "user": 5}
+
+# `@EDID-SW-<FAMILY>:<index>,<input>` — the family token per source.
+_EDID_CMD_FAMILY: dict[str, str] = {"out": "OUT", "sys": "SYS", "user": "USER"}
+
+# `form-system-info.cgi` read parameter per source.
+_EDID_READ_PARAM: dict[str, str] = {
+    "out": "out_edid",
+    "sys": "sys_edid",
+    "user": "user_edid",
+}
+
+# The device reports a failed EDID read with this literal response body.
+EDID_ERROR_BODY = "ERROR"
+
+# Upper bound on how far the catalogue probe may walk a family before giving
+# up, in case a unit never answers ERROR. Purely a safety stop.
+EDID_PROBE_LIMIT = 32
 
 
 class MatrixClient:
@@ -173,6 +196,108 @@ class MatrixClient:
         cmd = f"SW {input_num} {output_num}"
         await self.send_command(cmd)
         return True
+
+    async def set_input_edid(self, source: EdidSource, index: int, input_num: int | None) -> bool:
+        """Assign an EDID to one input, or to ALL inputs when `input_num` is None.
+
+        Builds one of the three documented commands:
+
+            @EDID-SW-OUT:<out>,<in>    EDID read from output <out>
+            @EDID-SW-SYS:<n>,<in>      built-in EDID <n>
+            @EDID-SW-USER:<n>,<in>     user slot <n>
+
+        `<in>` = 0 is the device's "all inputs" form, which is what
+        `input_num=None` sends. Inputs are 1-based.
+
+        Everything is validated before anything is sent: this device answers
+        `OK` to commands it then silently ignores, so an `OK` is not
+        confirmation and a bad index would look like a success.
+
+        Note there is **no way to read back which EDID an input is using** —
+        nothing returned here or elsewhere reports the assignment.
+
+        Args:
+            source: "out", "sys" or "user"
+            index: output number (1-8), built-in slot (1-10) or user slot (1-5)
+            input_num: input 1-8, or None for all inputs
+
+        Returns:
+            True if the command was accepted by the HTTP layer.
+
+        Raises:
+            ValueError: If the source, index or input number is out of range
+            RuntimeError: If the command fails
+        """
+        if source not in _EDID_CMD_FAMILY:
+            raise ValueError(
+                f"Invalid EDID source: {source!r} (must be one of " f"{sorted(_EDID_CMD_FAMILY)})"
+            )
+        max_index = EDID_INDEX_MAX[source]
+        if not 1 <= index <= max_index:
+            raise ValueError(f"Invalid {source} EDID index: {index} (must be 1-{max_index})")
+        if input_num is not None and not 1 <= input_num <= 8:
+            raise ValueError(f"Invalid input number: {input_num} (must be 1-8 or None)")
+
+        target = 0 if input_num is None else input_num
+        cmd = f"@EDID-SW-{_EDID_CMD_FAMILY[source]}:{index},{target}"
+        await self.send_command(cmd)
+        log.info("matrix_edid_assigned", source=source, index=index, input=target)
+        return True
+
+    async def read_edid(self, source: EdidSource, index: int) -> dict | None:
+        """Read one EDID slot: `{'name', 'hex'}`, or None when unreadable.
+
+        `sys_edid` and `user_edid` read fine on this unit. `out_edid` returns
+        the literal body `ERROR` here whether or not you are logged in — that
+        is normal, not a fault and not a permissions problem, so a failed read
+        is **never** an exception. Reading past the last slot of a family also
+        returns `ERROR`, which is how the catalogue probe finds the ceiling.
+
+        Args:
+            source: "out", "sys" or "user"
+            index: 1-based slot number
+
+        Returns:
+            {"name": str, "hex": str} or None when the device cannot read it
+
+        Raises:
+            ValueError: If the source is unknown or the index is below 1
+        """
+        if source not in _EDID_READ_PARAM:
+            raise ValueError(
+                f"Invalid EDID source: {source!r} (must be one of " f"{sorted(_EDID_READ_PARAM)})"
+            )
+        if index < 1:
+            raise ValueError(f"Invalid EDID index: {index} (must be >= 1)")
+
+        if not self._client or not self._running:
+            log.warning("matrix_client_not_initialized", action="read_edid")
+            return None
+
+        endpoint = f"{self.base_url}/form-system-info.cgi"
+        data = {_EDID_READ_PARAM[source]: str(index)}
+
+        try:
+            response = await self._client.post(endpoint, data=data)
+            response.raise_for_status()
+
+            if (response.text or "").strip().upper() == EDID_ERROR_BODY:
+                log.debug("edid_read_error_body", source=source, index=index)
+                return None
+
+            result = response.json()
+            name = result.get("edid_name")
+            hex_blob = result.get("edid_hex")
+            if name is None and hex_blob is None:
+                log.debug("edid_read_empty", source=source, index=index)
+                return None
+            return {"name": name, "hex": hex_blob}
+
+        except Exception as e:
+            # A failed EDID read is routine on this device; report it as
+            # "unreadable" rather than propagating.
+            log.debug("edid_read_failed", source=source, index=index, error=str(e))
+            return None
 
     async def get_routing_state(self) -> dict[int, int]:
         """Get current routing state for all outputs.

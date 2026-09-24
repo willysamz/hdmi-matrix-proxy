@@ -4,6 +4,10 @@ Subscribes to:
 - `matrix/routing/output/{1..8}/set` — payload is an input *name* string
   (HA's select entity publishes the selected option). The controller
   resolves the name to an input number and calls `MatrixClient.set_routing`.
+- `matrix/edid/input/{1..8}/set` — payload is an EDID catalogue label
+  (e.g. `SYS 8 · UHD4K60`). The controller resolves it to a source+index
+  and calls `MatrixClient.set_input_edid`, then echoes the label it set.
+  There is no read-back for EDID, so that echo is the only state there is.
 - `matrix/routing/preset/set` — payload is a JSON map of
   `{output_or_name: input_or_name}` mirroring the existing
   `/api/routing/preset` REST endpoint. Single atomic hardware operation
@@ -16,6 +20,8 @@ import json
 from typing import TYPE_CHECKING
 
 import structlog
+
+from app.edid import EdidCatalogue
 
 if TYPE_CHECKING:
     from app.config import Settings
@@ -39,11 +45,13 @@ class Controller:
         mqtt: MqttClient,
         poller: Poller,
         settings: Settings,
+        edid_catalogue: EdidCatalogue | None = None,
     ) -> None:
         self.matrix = matrix
         self.mqtt = mqtt
         self.poller = poller
         self.settings = settings
+        self.edid_catalogue = edid_catalogue or EdidCatalogue()
 
     async def set_output_input(self, output_number: int, payload: str) -> None:
         """Handle a per-output `set` command.
@@ -64,6 +72,53 @@ class Controller:
         )
         await self.matrix.set_routing(input_number, output_number)
         self.poller.trigger_immediate_poll()
+
+    async def set_input_edid(self, input_number: int, payload: str) -> None:
+        """Handle a per-input EDID `set` command.
+
+        `payload` is a catalogue label as published in the select's
+        `options[]` (`SYS 8 · UHD4K60`, `USER 1 · Beyond TV`,
+        `Copy from output 3`). We resolve it against the catalogue rather
+        than parsing it, so an option we never offered is rejected instead
+        of being turned into a command the device would answer `OK` to and
+        then ignore.
+
+        After the write we publish the label we just set. We do **not**
+        `trigger_immediate_poll` — the poller reads routing state, and the
+        matrix has no endpoint that reports an input's EDID assignment, so
+        there is nothing to poll for. What we publish is what we set, and it
+        is wrong the moment somebody changes it at the front panel.
+        """
+        if not 1 <= input_number <= 8:
+            # Input 0 is the device's "all inputs" form. It is intentionally
+            # not reachable from an entity — a misclick would retune every
+            # source in the house.
+            raise ControllerError(f"invalid input number: {input_number}")
+
+        await self.edid_catalogue.ensure_loaded(self.matrix)
+        option = self.edid_catalogue.resolve(payload)
+        if option is None:
+            raise ControllerError(
+                f"unknown EDID option {payload!r}; " f"known: {self.edid_catalogue.labels}"
+            )
+
+        log.info(
+            "mqtt_edid_set",
+            input=input_number,
+            source=option.source,
+            index=option.index,
+            label=option.label,
+        )
+        await self.matrix.set_input_edid(option.source, option.index, input_number)
+
+        prefix = self.settings.mqtt_topic_prefix.strip("/")
+        # Not retained: on a restart the select must go back to unknown
+        # rather than replay a value the device may no longer be using.
+        await self.mqtt.publish(
+            f"{prefix}/edid/input/{input_number}/state",
+            option.label,
+            retain=False,
+        )
 
     async def set_preset(self, json_payload: str) -> None:
         """Handle a bulk preset `set` command.

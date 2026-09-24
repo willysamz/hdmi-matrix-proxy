@@ -6,6 +6,11 @@ from typing import Literal
 
 from pydantic import BaseModel, Field
 
+# EDID source families supported by the matrix's `@EDID-SW-*` commands.
+# "out" copies the EDID read from an output, "sys" is a built-in slot,
+# "user" is a writable user slot.
+EdidSource = Literal["out", "sys", "user"]
+
 
 # Enums for API
 class ConnectionState(str, Enum):

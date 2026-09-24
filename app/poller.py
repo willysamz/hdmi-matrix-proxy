@@ -14,8 +14,10 @@ import structlog
 
 from app.discovery import (
     health_binary_sensor_payload,
+    input_edid_select_payload,
     output_select_payload,
 )
+from app.edid import EDID_UNKNOWN_PAYLOAD, EdidCatalogue
 
 if TYPE_CHECKING:
     from app.config import Settings
@@ -33,10 +35,12 @@ class Poller:
         matrix: MatrixClient,
         mqtt: MqttClient,
         settings: Settings,
+        edid_catalogue: EdidCatalogue | None = None,
     ) -> None:
         self.matrix = matrix
         self.mqtt = mqtt
         self.settings = settings
+        self.edid_catalogue = edid_catalogue or EdidCatalogue()
 
         self._task: asyncio.Task | None = None
         self._stop_event = asyncio.Event()
@@ -47,6 +51,10 @@ class Poller:
         self._published_input_names: dict[int, str] | None = None
         self._published_output_names: dict[int, str] | None = None
         self._published_routing: dict[int, int] | None = None
+        # Per-input EDID has no read-back, so there is no "published state"
+        # to diff. We publish `unknown` once, when discovery goes out, and
+        # after that only the Controller publishes — the value it just set.
+        self._edid_unknown_published = False
 
     def trigger_immediate_poll(self) -> None:
         """Signal the run loop to skip the sleep and poll right now.
@@ -116,6 +124,7 @@ class Poller:
         )
         if not self._discovery_published or names_changed:
             await self._publish_discovery(input_names, output_names)
+            await self._publish_edid_unknown()
             self._published_input_names = dict(input_names)
             self._published_output_names = dict(output_names)
             self._discovery_published = True
@@ -139,6 +148,28 @@ class Poller:
                     retain=True,
                 )
         self._published_routing = dict(routing)
+
+    async def _publish_edid_unknown(self) -> None:
+        """Seed every per-input EDID select as `unknown`.
+
+        Done once, right after discovery. The matrix cannot report which EDID
+        an input is using, so `unknown` is the only honest value until this
+        proxy sets one — and because the state is published unretained, a
+        proxy or HA restart correctly falls back to unknown rather than
+        resurrecting a value a front-panel change may have invalidated.
+        """
+        if not self.settings.ha_discovery_enabled or not self.edid_catalogue.loaded:
+            return
+        if self._edid_unknown_published:
+            return
+        prefix = self.settings.mqtt_topic_prefix.strip("/")
+        for input_n in range(1, 9):
+            await self.mqtt.publish(
+                f"{prefix}/edid/input/{input_n}/state",
+                EDID_UNKNOWN_PAYLOAD,
+                retain=False,
+            )
+        self._edid_unknown_published = True
 
     async def _publish_health(self, reachable: bool) -> None:
         if not self.settings.ha_discovery_enabled:
@@ -182,6 +213,27 @@ class Poller:
                 input_names=options,
             )
             await self.mqtt.publish(topic, payload, retain=True)
+
+        # Per-input EDID selects. The catalogue is probed from the device
+        # once, on the first cycle that reaches it; if that failed we simply
+        # skip the entities this round and try again next cycle rather than
+        # publish an empty dropdown.
+        await self.edid_catalogue.ensure_loaded(self.matrix)
+        if self.edid_catalogue.loaded:
+            edid_options = self.edid_catalogue.labels
+            for input_n in range(1, 9):
+                topic, payload = input_edid_select_payload(
+                    discovery_prefix=self.settings.ha_discovery_prefix,
+                    device_id=device_id,
+                    device_name=device_name,
+                    state_topic=f"{prefix}/edid/input/{input_n}/state",
+                    command_topic=f"{prefix}/edid/input/{input_n}/set",
+                    availability_topic=availability_topic,
+                    input_number=input_n,
+                    input_name=input_names.get(input_n),
+                    options=edid_options,
+                )
+                await self.mqtt.publish(topic, payload, retain=True)
 
         # Health binary_sensor.
         topic, payload = health_binary_sensor_payload(
