@@ -128,9 +128,7 @@ _PRESET_SET_RE = re.compile(r"^[^/]+/routing/preset/set$")
 _EDID_SET_RE = re.compile(r"^[^/]+/edid/input/(?P<n>\d+)/set$")
 
 
-async def _command_subscriber(
-    mqtt: MqttClient, controller: Controller, topic_prefix: str
-) -> None:
+async def _command_subscriber(mqtt: MqttClient, controller: Controller, topic_prefix: str) -> None:
     """Subscribe to per-output + preset command topics and route them."""
     prefix = topic_prefix.strip("/")
     output_filter = f"{prefix}/routing/output/+/set"
