@@ -211,7 +211,20 @@ class MatrixClient:
             raise ValueError(f"Invalid output number: {output_num} (must be 1-8)")
 
         cmd = f"SW {input_num} {output_num}"
-        await self.send_command(cmd)
+        body = await self.send_command(cmd)
+        # Check the body, exactly as set_input_edid does. Before 2026-09-24 this
+        # discarded send_command's return and reported success unconditionally, so
+        # a routing command the device REFUSED still came back True and the caller
+        # published confident state for something that never happened. The device
+        # really does answer `OK` to things it then ignores — the sibling
+        # multiviewer's HDCP select accepts `Off` and silently keeps its old value.
+        if (body or "").strip() != COMMAND_OK_BODY:
+            log.warning(
+                "matrix_command_refused",
+                cmd=cmd,
+                body=(body or "").strip()[:64],
+            )
+            return False
         return True
 
     async def set_input_edid(

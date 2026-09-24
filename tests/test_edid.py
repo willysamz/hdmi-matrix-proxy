@@ -823,11 +823,23 @@ async def test_poller_publishes_input_resolution_on_delta():
     matrix = _unit_like_matrix()
     mqtt = _FakeMqtt()
     poller = Poller(matrix=matrix, mqtt=mqtt, settings=_Settings(), edid_catalogue=EdidCatalogue())
+
+    # Resolutions publish on EVERY OTHER cycle (2026-09-24): eight extra POSTs on
+    # top of the three a cycle already makes would be ~3.7x the device's traffic,
+    # and the matrix is the constraint, not our HTTP client. So cycle 1 is silent.
+    await poller.poll_once()
+    assert not [t for t, _, _ in mqtt.published if t.endswith("/resolution")], (
+        "cycle 1 must not hit the device for resolutions"
+    )
+
     await poller.poll_once()
     first = [(t, p) for t, p, _ in mqtt.published if t == "matrix/edid/input/6/resolution"]
     assert first == [("matrix/edid/input/6/resolution", "1920x1080P60")]
 
+    # cycle 3 silent again (throttle), cycle 4 would publish but the value is
+    # unchanged, so the delta check keeps it quiet too
     mqtt.published.clear()
+    await poller.poll_once()
     await poller.poll_once()
     assert not [t for t, _, _ in mqtt.published if t.endswith("/resolution")]
 
@@ -851,3 +863,20 @@ async def test_poller_retries_the_catalogue_when_the_probe_failed():
     await poller.poll_once()
     assert cat.loaded is True
     assert [t for t, _, _ in mqtt.published if "select/hdmi_matrix_input_6_edid" in t]
+
+
+@pytest.mark.asyncio
+async def test_set_routing_returns_false_when_the_device_does_not_say_ok():
+    """Regression, fixed 2026-09-24. `set_routing` used to discard the response
+    body and return True unconditionally, so a routing command the device
+    REFUSED still reported success. Same defect the EDID path was written to
+    avoid; this pins the fix on the older path too."""
+    http = _mock_http()
+    client = await _started_client(http)
+    try:
+        http.post.return_value = _response("ERROR")
+        assert await client.set_routing(3, 1) is False
+        http.post.return_value = _response("OK")
+        assert await client.set_routing(3, 1) is True
+    finally:
+        await client.stop()

@@ -52,6 +52,7 @@ class Poller:
         self._published_input_names: dict[int, str] | None = None
         self._published_output_names: dict[int, str] | None = None
         self._published_routing: dict[int, int] | None = None
+        self._resolution_tick = 0
         self._published_resolutions: dict[int, str] = {}
 
     def trigger_immediate_poll(self) -> None:
@@ -157,7 +158,13 @@ class Poller:
                 )
         self._published_routing = dict(routing)
 
-        await self._publish_input_resolutions(prefix)
+        # Every OTHER cycle. Eight POSTs on top of the three this cycle already
+        # makes would be ~3.7x the device's traffic, and the constraint here is the
+        # MATRIX, not our HTTP client — the vendor's own UI throttles its polling
+        # around every write. Halving it keeps us near the UI's own ~1 Hz.
+        self._resolution_tick += 1
+        if self._resolution_tick % 2 == 0:
+            await self._publish_input_resolutions(prefix)
 
     async def _publish_input_resolutions(self, prefix: str) -> None:
         """Publish each input's live resolution, on delta.
