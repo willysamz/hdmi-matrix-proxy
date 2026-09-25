@@ -27,13 +27,23 @@ class Settings(BaseSettings):
     poll_interval: float = 10.0  # seconds between routing-state polls
 
     # --- EDID ---
-    # After assigning an EDID to an input the proxy resets that input port
-    # (`@PORT-RESET:0,NN`) so the source re-reads it. A source only re-reads
-    # EDID on a hotplug, so something has to provoke one — but it is NOT
-    # verified that this is required, nor that a port reset is the right
-    # provocation. See `MatrixClient.reset_input_port`. This is the single
-    # place to turn it off once somebody measures it.
-    matrix_edid_rehandshake: bool = True
+    # After assigning an EDID to an input the proxy can reset that input port
+    # (`@PORT-RESET:0,NN`). DEFAULT OFF since 2026-09-25, because it was
+    # MEASURED HARMFUL: it does not merely pulse the hotplug line, it knocks
+    # the input down, and the source does not reliably come back. Six of these
+    # against a live PS5 left it with no usable picture on any output for over
+    # an hour, through a console restart and a full matrix power cycle.
+    #
+    # The decisive evidence: the matrix's OWN web UI never couples these two.
+    # Its EDID handler ends at `send_cmd(c)` with no follow-up, and
+    # `@PORT-RESET` sits on a separate button a human presses deliberately.
+    # Setting the EDID from that UI -- the write alone, no reset -- fixed the
+    # PS5 immediately. The coupling was ours, not the device's.
+    #
+    # So the EDID write IS sufficient on its own, which is the case the old
+    # comment here said nobody had observed. Leave this off. It stays as a
+    # flag only so the behaviour can be reproduced deliberately.
+    matrix_edid_rehandshake: bool = False
 
     # --- MQTT broker (v0.2+) ---
     # If `mqtt_enabled` is False the MQTT path is fully off and the
