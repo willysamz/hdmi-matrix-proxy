@@ -13,6 +13,11 @@ data:
   SERVER_PORT: {{ .Values.service.port | quote }}
   LOG_LEVEL: {{ .Values.logging.level | quote }}
   LOG_JSON: {{ .Values.logging.json | quote }}
+  # --- EDID ---
+  # Default false: the post-write @PORT-RESET was measured HARMFUL 2026-09-25
+  # (it knocks the input down and the source may not come back). The EDID
+  # write alone is sufficient. See app/config.py.
+  MATRIX_EDID_REHANDSHAKE: {{ .Values.config.matrixEdidRehandshake | default "false" | quote }}
   # --- MQTT (v0.2+) ---
   MQTT_ENABLED: {{ .Values.mqtt.enabled | default "false" | quote }}
   MQTT_HOST: {{ .Values.mqtt.host | default "mqtt" | quote }}

@@ -73,8 +73,12 @@ def test_set_edid_by_source_and_index(api, mock_matrix_client):
     data = response.json()
     assert data["success"] is True
     assert data["input"] == 6
-    assert data["rehandshake"] is True
-    mock_matrix_client.set_input_edid.assert_awaited_once_with("sys", 8, 6, rehandshake=True)
+    # Default OFF since 2026-09-25: the post-write @PORT-RESET was measured
+    # harmful. An EDID write is one command unless a caller asks otherwise.
+    assert data["rehandshake"] is False
+    mock_matrix_client.set_input_edid.assert_awaited_once_with(
+        "sys", 8, 6, rehandshake=False
+    )
 
 
 def test_set_edid_can_skip_the_rehandshake(api, mock_matrix_client):

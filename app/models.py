@@ -167,9 +167,11 @@ class SetInputEdidRequest(BaseModel):
     index: int = Field(ge=1, description="Slot number: sys 1-10, user 1-5, out 1-8")
     input: int = Field(ge=1, le=8, description="Input number (1-8)")
     rehandshake: bool = Field(
-        True,
-        description="Reset the input port afterwards so the source re-reads "
-        "the EDID. UNVERIFIED mechanism — see MatrixClient.reset_input_port.",
+        False,
+        description="Reset the input port afterwards. DEFAULT OFF — measured "
+        "HARMFUL 2026-09-25: it knocks the input down and the source may not "
+        "come back. The EDID write alone is sufficient. See "
+        "MatrixClient.reset_input_port.",
     )
 
 

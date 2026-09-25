@@ -232,7 +232,7 @@ class MatrixClient:
         source: EdidSource,
         index: int,
         input_num: int | None,
-        rehandshake: bool = True,
+        rehandshake: bool = False,
     ) -> bool:
         """Assign an EDID to one input, or to ALL inputs when `input_num` is None.
 
@@ -261,10 +261,11 @@ class MatrixClient:
             source: "out", "sys" or "user"
             index: output number (1-8), built-in slot (1-10) or user slot (1-5)
             input_num: input 1-8, or None for all inputs
-            rehandshake: reset the input port afterwards so the source
-                re-reads the new EDID. Defaults on, but the mechanism is
-                **unverified** — see `reset_input_port`. Ignored for the
-                all-inputs form, which would reset every port in the house.
+            rehandshake: reset the input port afterwards. **Defaults OFF —
+                measured harmful, see `reset_input_port`.** The EDID write
+                alone is sufficient; the source re-reads without it. Ignored
+                for the all-inputs form, which would reset every port in the
+                house.
 
         Returns:
             True only if the device answered `OK`. False if it refused.
@@ -319,33 +320,34 @@ class MatrixClient:
         1-based port zero-padded to two digits, matching that UI's `uport()`.
         `@EDID-SW-*` does **not** pad; do not cross the two formats.
 
-        **Why this is here and what is NOT known about it.** A source only
-        re-reads EDID on a hotplug, so an EDID change needs *something* to
-        make the source look again. Every successful hardware test on
-        2026-09-24 happened to re-route the affected matrix *output* away and
-        back, so the re-handshake was never isolated:
+        **MEASURED HARMFUL 2026-09-25. Do not enable this.**
 
-        - It is **not verified that a re-handshake is required at all.** The
-          EDID change alone may well take effect immediately; nobody has
-          observed that case.
-        - The re-route that was being done is **not an obvious mechanism**.
-          EDID is presented to the source on the *input* port, and changing
-          which input feeds an output should not make a source re-read
-          anything. Either the matrix pulses HPD on an input when its routing
-          changes, or the re-route did nothing and the EDID write was
-          sufficient on its own.
+        This does not merely pulse the hotplug line. It knocks the input down,
+        and the source does not reliably come back: six of these fired at a
+        live PS5 left it with no usable picture on any output for over an
+        hour, surviving a console restart and a full matrix power cycle. The
+        symptom looked like a damaged input, because each new attempt to fix
+        it re-applied the damage.
 
-        This port reset is used instead because it is input-scoped: it
-        perturbs no routing, so it publishes no intermediate source over MQTT
-        for a live automation to react to, which the route-bounce would.
+        **The device's own UI never couples an EDID write to this.** Its EDID
+        handler (`$(".sw-edid").click`) ends at `send_cmd(c)` with no
+        follow-up; `@PORT-RESET` lives on a separate button a human presses
+        deliberately. Setting the EDID from that UI -- the write alone -- fixed
+        the PS5 immediately.
 
-        It is still **unverified**: it has never been sent to this hardware,
-        and the web UI blanks the port's audio-select, mirror and picture
-        sliders right after sending it, which suggests it may reset more of
-        the input card's configuration than the HDMI hotplug line.
+        That answers the question the previous version of this docstring left
+        open. It asked whether a re-handshake was required at all, and said
+        nobody had observed the EDID write being sufficient on its own. It is
+        sufficient on its own. The source re-reads without any provocation
+        from us.
 
-        Measure it before trusting it, and turn it off in one place
-        (`settings.matrix_edid_rehandshake`) if it is unnecessary or harmful.
+        The earlier note that this had "never been sent to this hardware" was
+        also wrong by the time it mattered: `matrix_edid_rehandshake` defaulted
+        to True, so it shipped enabled and fired on every EDID write.
+
+        Kept as a flag, defaulted OFF, so the behaviour can be reproduced
+        deliberately by someone investigating it -- never as a side effect of
+        setting an EDID.
         """
         if not 1 <= input_num <= 8:
             raise ValueError(f"Invalid input number: {input_num} (must be 1-8)")

@@ -23,6 +23,10 @@ config:
   # Routing-state poll interval used by the MQTT publisher. Ignored
   # when mqtt.enabled is false (then HA does its own REST polling).
   pollInterval: "10.0"
+  # Reset the input port after an EDID write so the source re-reads it.
+  # MEASURED HARMFUL 2026-09-25 - leave false. The EDID write alone works;
+  # the reset knocks the input down and the source may not return.
+  matrixEdidRehandshake: "false"
 
 # --- MQTT broker (v0.2+) ---
 # Opt-in. When mqtt.enabled is "true" the proxy publishes routing state

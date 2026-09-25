@@ -197,27 +197,34 @@ async def test_set_input_edid_returns_false_when_the_device_does_not_say_ok():
 
 
 @pytest.mark.asyncio
-async def test_set_input_edid_resets_the_input_port_by_default():
-    """The proxy owns the re-handshake: it is the only layer that knows an
-    EDID just changed and on which input."""
+async def test_set_input_edid_sends_only_the_edid_write():
+    """An EDID write is ONE command. No port reset rides along with it.
+
+    Inverted 2026-09-25. This previously asserted the opposite, and that
+    assertion is what made the harmful behaviour look intentional and tested.
+    The matrix's own web UI sends the EDID command alone -- its handler ends
+    at `send_cmd(c)`, and `@PORT-RESET` is a separate button -- and the write
+    alone is what actually fixed the PS5.
+    """
     http = _mock_http()
     client = await _started_client(http)
     try:
         await client.set_input_edid("sys", 8, 6)
-        assert _commands(http) == ["@EDID-SW-SYS:8,6", "@PORT-RESET:0,06"]
+        assert _commands(http) == ["@EDID-SW-SYS:8,6"]
     finally:
         await client.stop()
 
 
 @pytest.mark.asyncio
-async def test_set_input_edid_rehandshake_can_be_turned_off():
-    """It is not verified that a re-handshake is needed at all, so it has to
-    be switchable in one place."""
+async def test_set_input_edid_rehandshake_can_still_be_forced_on():
+    """Kept switchable so the harmful behaviour can be reproduced on purpose
+    by someone investigating it -- never as a side effect of setting an EDID.
+    """
     http = _mock_http()
     client = await _started_client(http)
     try:
-        await client.set_input_edid("sys", 8, 6, rehandshake=False)
-        assert _commands(http) == ["@EDID-SW-SYS:8,6"]
+        await client.set_input_edid("sys", 8, 6, rehandshake=True)
+        assert _commands(http) == ["@EDID-SW-SYS:8,6", "@PORT-RESET:0,06"]
     finally:
         await client.stop()
 
@@ -886,3 +893,20 @@ async def test_set_routing_returns_false_when_the_device_does_not_say_ok():
         assert await client.set_routing(3, 1) is True
     finally:
         await client.stop()
+
+
+def test_rehandshake_defaults_off():
+    """The post-write `@PORT-RESET` must stay OFF by default.
+
+    Regression guard for 2026-09-25. It shipped defaulted ON, fired on every
+    EDID write, and left a live PS5 with no usable picture on any output for
+    over an hour -- through a console restart and a full matrix power cycle.
+    The matrix's own web UI never couples the two: setting the EDID there,
+    with no reset, fixed it immediately.
+
+    This asserts the real `Settings` default, not a fake, because a fake is
+    what let the wrong default ship unnoticed.
+    """
+    from app.config import Settings
+
+    assert Settings().matrix_edid_rehandshake is False
